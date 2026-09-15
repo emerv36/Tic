@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/persona-query-response.schema.json",
+  "title": "Consulta autoritativa paginada de personas SIGE",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "page", "page_size", "total", "items"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "page": { "type": "integer", "minimum": 1 },
+    "page_size": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "total": { "type": "integer", "minimum": 0 },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/persona" } }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "catalogo": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nombre_snapshot", "version"],
+      "properties": { "id": { "type": "integer", "minimum": 1 }, "nombre_snapshot": { "type": "string", "minLength": 1, "maxLength": 190 }, "version": { "type": "integer", "minimum": 1 } }
+    },
+    "vinculo": {
+      "type": "object", "additionalProperties": false,
+      "required": ["vinculo_uuid", "tipo", "estado", "version", "cargo", "dependencia"],
+      "properties": {
+        "vinculo_uuid": { "$ref": "#/$defs/uuid" }, "tipo": { "enum": ["DOCENTE", "ADMINISTRATIVO"] },
+        "estado": { "enum": ["ACTIVO", "INACTIVO"] }, "version": { "type": "integer", "minimum": 1 },
+        "cargo": { "oneOf": [{ "$ref": "#/$defs/catalogo" }, { "type": "null" }] },
+        "dependencia": { "oneOf": [{ "$ref": "#/$defs/catalogo" }, { "type": "null" }] }
+      },
+      "allOf": [{
+        "if": { "properties": { "tipo": { "const": "ADMINISTRATIVO" } } },
+        "then": { "properties": { "cargo": { "$ref": "#/$defs/catalogo" }, "dependencia": { "$ref": "#/$defs/catalogo" } } },
+        "else": { "properties": { "cargo": { "type": "null" }, "dependencia": { "type": "null" } } }
+      }]
+    },
+    "persona": {
+      "type": "object", "additionalProperties": false,
+      "required": ["persona_uuid", "tipo_documento", "numero_documento", "nombres", "apellidos", "correo", "celular", "rh", "estado", "autoridad_identidad", "persona_version", "vinculos"],
+      "properties": {
+        "persona_uuid": { "$ref": "#/$defs/uuid" }, "tipo_documento": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "numero_documento": { "type": "string", "minLength": 3, "maxLength": 50 }, "nombres": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "apellidos": { "type": "string", "minLength": 1, "maxLength": 150 }, "correo": { "oneOf": [{ "type": "string", "format": "email", "maxLength": 190 }, { "type": "null" }] },
+        "celular": { "oneOf": [{ "type": "string", "pattern": "^3[0-9]{9}$" }, { "type": "null" }] }, "rh": { "oneOf": [{ "enum": ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] }, { "type": "null" }] },
+        "estado": { "enum": ["ACTIVA", "INACTIVA"] }, "autoridad_identidad": { "enum": ["TIC_ESTUDIANTE", "SIGE_PERSONAL"] },
+        "persona_version": { "type": "integer", "minimum": 1 }, "vinculos": { "type": "array", "items": { "$ref": "#/$defs/vinculo" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174111",
+  "tipo": "VINCULO_CREAR",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "expected_persona_version": 1,
+  "vinculo": {
+    "vinculo_uuid": null,
+    "tipo": "DOCENTE",
+    "cargo": { "id": 7, "nombre_snapshot": "DOCENTE", "version": 1 },
+    "dependencia": null
+  },
+  "ocurrido_en": "2026-08-30 16:01:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

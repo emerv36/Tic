@@ -1,0 +1,12 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174111",
+  "tipo": "REACTIVACION_INSTITUCIONAL",
+  "alcance": "PERSONA",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "expected_persona_version": 6,
+  "vinculo_uuid": null,
+  "solicitud_talento_humano": { "id": "TH-2026-002", "motivo": "Reintegro institucional" },
+  "ocurrido_en": "2026-08-30 16:11:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

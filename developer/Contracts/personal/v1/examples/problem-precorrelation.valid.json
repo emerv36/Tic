@@ -1,0 +1,5 @@
+{
+  "status": "ERROR",
+  "codigo": "JSON_INVALIDO",
+  "mensaje": "No fue posible correlacionar la solicitud con una operación válida."
+}

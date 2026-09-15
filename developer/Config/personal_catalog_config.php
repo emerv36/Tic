@@ -1,0 +1,5 @@
+<?php
+
+if (!defined('TIC_SIGE_PERSONAL_CATALOGS_ENABLED')) {
+    define('TIC_SIGE_PERSONAL_CATALOGS_ENABLED', true);
+}

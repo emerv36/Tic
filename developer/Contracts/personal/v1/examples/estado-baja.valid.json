@@ -1,0 +1,12 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174104",
+  "tipo": "BAJA_INSTITUCIONAL",
+  "alcance": "VINCULO",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "expected_persona_version": 4,
+  "vinculo_uuid": "123e4567-e89b-42d3-a456-426614174201",
+  "solicitud_talento_humano": { "id": "TH-2026-001", "motivo": "Terminación del vínculo" },
+  "ocurrido_en": "2026-08-30 16:04:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

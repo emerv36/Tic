@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/integration-problem.schema.json",
+  "title": "Error HTTP previo a correlación de una operación",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "codigo", "mensaje"],
+  "properties": {
+    "status": { "const": "ERROR" },
+    "codigo": { "enum": ["JSON_INVALIDO", "ID_OPERACION_INVALIDO", "CONTENT_TYPE_INVALIDO", "PAYLOAD_DEMASIADO_GRANDE", "METADATA_INVALIDA", "PARTES_MULTIPART_INVALIDAS", "NO_AUTORIZADO", "METODO_NO_PERMITIDO", "CONSULTA_INVALIDA", "SERVICIO_NO_DISPONIBLE", "ERROR_INTERNO"] },
+    "mensaje": { "type": "string", "minLength": 1, "maxLength": 1000 }
+  }
+}

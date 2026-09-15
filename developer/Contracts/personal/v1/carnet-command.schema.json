@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/carnet-command.schema.json",
+  "title": "Comando de carné de personal TIC a SIGE",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "id_operacion", "tipo", "persona_uuid", "uid_rfid", "motivo", "expected_persona_version", "ocurrido_en", "usuario"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "id_operacion": { "$ref": "#/$defs/uuid" },
+    "tipo": { "enum": ["ASIGNACION", "REEMPLAZO", "BLOQUEO", "ENTREGA_CONFIRMADA"] },
+    "persona_uuid": { "$ref": "#/$defs/uuid" },
+    "uid_rfid": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 100 }, { "type": "null" }] },
+    "motivo": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 100 }, { "type": "null" }] },
+    "expected_persona_version": { "type": "integer", "minimum": 1 },
+    "ocurrido_en": { "$ref": "#/$defs/dateTimeBogota" },
+    "usuario": { "$ref": "#/$defs/usuarioCarnetizacion" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "tipo": { "enum": ["ASIGNACION", "REEMPLAZO"] } } },
+      "then": { "properties": { "uid_rfid": { "type": "string", "minLength": 1, "maxLength": 100 } } },
+      "else": { "properties": { "uid_rfid": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "tipo": { "const": "BLOQUEO" } } },
+      "then": { "properties": { "motivo": { "enum": ["PERDIDA", "ROBO", "DETERIORO", "BLOQUEO_OPERATIVO"] } } }
+    },
+    {
+      "if": { "properties": { "tipo": { "const": "REEMPLAZO" } } },
+      "then": { "properties": { "motivo": { "enum": ["PERDIDA", "ROBO", "DETERIORO"] } } }
+    },
+    {
+      "if": { "properties": { "tipo": { "enum": ["ASIGNACION", "ENTREGA_CONFIRMADA"] } } },
+      "then": { "properties": { "motivo": { "type": "null" } } }
+    }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "dateTimeBogota": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$" },
+    "usuarioCarnetizacion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nombre", "rol"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "nombre": { "type": "string", "minLength": 1, "maxLength": 190 },
+        "rol": { "const": "CARNETIZACION" }
+      }
+    }
+  }
+}

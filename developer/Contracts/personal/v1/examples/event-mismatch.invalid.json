@@ -1,0 +1,20 @@
+{
+  "contract_version": "1.0",
+  "id_evento": "123e4567-e89b-42d3-a456-426614174113",
+  "id_operacion": null,
+  "tipo": "PERSONA_CREADA",
+  "entidad": "CARNET",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "persona_version": 1,
+  "origen": "SIGE",
+  "ocurrido_en": "2026-08-30 16:00:00",
+  "data": {
+    "sige_carnet_id": 77,
+    "uid_rfid": "A1B2C3D4",
+    "estado": "ACTIVO",
+    "motivo": "NO_APLICA",
+    "fecha_emision": "2026-08-30 16:00:00",
+    "vigencia_hasta": null,
+    "entregado_en": null
+  }
+}

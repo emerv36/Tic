@@ -1,0 +1,27 @@
+{
+  "contract_version": "1.0",
+  "page": 1,
+  "page_size": 25,
+  "total": 1,
+  "items": [{
+    "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+    "tipo_documento": "CC",
+    "numero_documento": "100200300",
+    "nombres": "ANA",
+    "apellidos": "PEREZ",
+    "correo": "ana@example.edu.co",
+    "celular": "3001234567",
+    "rh": "O+",
+    "estado": "ACTIVA",
+    "autoridad_identidad": "SIGE_PERSONAL",
+    "persona_version": 2,
+    "vinculos": [{
+      "vinculo_uuid": "123e4567-e89b-42d3-a456-426614174201",
+      "tipo": "ADMINISTRATIVO",
+      "estado": "ACTIVO",
+      "version": 1,
+      "cargo": { "id": 7, "nombre_snapshot": "SECRETARIA", "version": 3 },
+      "dependencia": { "id": 4, "nombre_snapshot": "ADMISIONES", "version": 2 }
+    }]
+  }]
+}

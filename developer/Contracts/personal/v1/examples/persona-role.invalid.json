@@ -1,0 +1,18 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174113",
+  "tipo": "PERSONA_CREAR",
+  "persona_uuid": null,
+  "expected_persona_version": 0,
+  "persona": {
+    "tipo_documento": "CC",
+    "numero_documento": "100200301",
+    "nombres": "LUIS",
+    "apellidos": "LOPEZ",
+    "celular": "3001234568",
+    "rh": "A+",
+    "correo": "luis@example.edu.co"
+  },
+  "ocurrido_en": "2026-08-30 16:13:00",
+  "usuario": { "id": "99", "nombre": "PROGRAMADOR", "rol": "PROGRAMADOR" }
+}

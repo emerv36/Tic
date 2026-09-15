@@ -1,0 +1,123 @@
+# Variable de Entorno para Habilitar Menú y UI de Personal en Producción
+SetEnv TIC_SIGE_PERSONAL_UI_ENABLED 1
+SetEnv SIGE_INBOUND_API_KEY l03cced09c86029cf38534ec54a4
+SetEnv SIGE_OUTBOUND_API_KEY l03cced09c86029cf38534ec54a4
+
+# Turn rewrite engine on
+Options +FollowSymlinks
+RewriteEngine on
+
+# Pass Authorization Header to PHP in Apache / FastCGI / LiteSpeed
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# map neat URL to internal URL
+RewriteRule 	^RecuperarCuenta/(\w+)/?$  cambiarpasswor.php?x=$1 [nc,qsa]
+RewriteRule 	^ValidarEmailReal/(\w+)/?$  confirmaremail.php?x=$1 [nc,qsa]
+
+# map neat URL to internal URL
+RewriteRule 	^clogin/(\w+)/?$  developer/codelogin.php?case=$1 [nc,qsa]
+RewriteRule 	^dashboard  dashboard.php  [nc,qsa]
+RewriteRule 	^login  login.php  [nc,qsa]
+RewriteRule 	^inscripcionlinea  			inscripcionlinea.php  [nc,qsa]
+RewriteRule 	^inscribete        			inscribete.php  [nc,qsa]
+RewriteRule 	^preinscripcion   		    preinscripcion.php  [nc,qsa]
+RewriteRule 	^crearempresa      			crearempresa.php  [nc,qsa]
+RewriteRule 	^alternancia       			alternancia.php  [nc,qsa]
+RewriteRule 	^Registraralternancia       Registraralternancia.php  [nc,qsa]
+RewriteRule 	^alternanciaArticulacion    alternanciaArticulacion.php  [nc,qsa]
+RewriteRule 	^Verificacion  verificarCarnet.php  [nc,qsa]
+
+RewriteRule 	^Menu  component/menu2.php  [nc,qsa]
+
+#controladores
+RewriteRule 	^Lopersa/Login/(\w+)/?$ developer/Controller/loginController.php?case=$1 [nc,qsa]
+RewriteRule 	^Lopersa/Usuarios/(\w+)/?$ developer/Controller/usuariosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Lopersa/Menu/(\w+)/?$ developer/Controller/menuController.php?case=$1 [nc,qsa]
+#RewriteRule	^Recuperar/(\w+)/?$ developer/Controller/loginController.php?case=$1 [nc,qsa]
+RewriteRule 	^LibiaBrito/Perfiles/(\w+)/?$ developer/Controller/perfilesController.php?case=$1 [nc,qsa]
+RewriteRule 	^LibiaBrito/Roles/(\w+)/?$ developer/Controller/rolesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Homero/AsingarMenuPerfiles/(\w+)/?$ developer/Controller/asignarmenuperfilController.php?case=$1 [nc,qsa]
+RewriteRule 	^Metodos/Metodos/(\w+)/?$ developer/Controller/metodoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Horarios/Horarios/(\w+)/?$ developer/Controller/horarioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Areas/Areas/(\w+)/?$ developer/Controller/areasController.php?case=$1 [nc,qsa]
+RewriteRule 	^Oferta/OfertaPrograma/(\w+)/?$ developer/Controller/ofertaprogramaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Bar/Miperfil/(\w+)/?$ developer/Controller/miperfilController.php?case=$1 [nc,qsa]
+RewriteRule 	^Lisa/Usuarios/(\w+)/?$ developer/Controller/usuariosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Maggi/Sedes/(\w+)/?$ developer/Controller/sedesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Marge/Inscripcion/(\w+)/?$ developer/Controller/inscripcionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Moe/Docentes/(\w+)/?$ developer/Controller/docentesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Milhouse/Salones/(\w+)/?$ developer/Controller/salonesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Willie/Programas/(\w+)/?$ developer/Controller/programasController.php?case=$1 [nc,qsa]
+RewriteRule 	^Apu/Modulos/(\w+)/?$ developer/Controller/modulosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Nelson/Periodos/(\w+)/?$ developer/Controller/periodosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Seymour/Descuentos/(\w+)/?$ developer/Controller/descuentosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Krusty/AsignarModuloDocentes/(\w+)/?$ developer/Controller/asignarmodulodocentesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Ralp/Inscripcion/(\w+)/?$ developer/Controller/inscripcionestudiantesprogramasController.php?case=$1 [nc,qsa]
+RewriteRule 	^Lenny/Matriculas/(\w+)/?$ developer/Controller/matriculasController.php?case=$1 [nc,qsa]
+RewriteRule 	^NedFlanders/Cursos/(\w+)/?$ developer/Controller/cursoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Maggi/Entidad/(\w+)/?$ developer/Controller/financiacionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Maggi/Entrada/(\w+)/?$ developer/Controller/medioEntradaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Edna/ReporteEstudiante/(\w+)/?$ developer/Controller/reporteEstudianteController.php?case=$1 [nc,qsa]
+RewriteRule 	^Patty/ReportesCoordinacion/(\w+)/?$ developer/Controller/reportesCoordinacionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Maggi/Colegio/(\w+)/?$ developer/Controller/colegioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Tony/Reportes/(\w+)/?$ developer/Controller/reportesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Hibbert/Pagos/(\w+)/?$ developer/Controller/pagosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Nikki/Plantel/(\w+)/?$ developer/Controller/plantelController.php?case=$1 [nc,qsa]
+RewriteRule 	^Martin/Informes/(\w+)/?$ developer/Controller/InformesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Troy/ExportarExcel/(\w+)/?$ developer/Controller/exportarExcelController.php?case=$1 [nc,qsa]
+RewriteRule 	^Version/Version/(\w+)/?$ developer/Controller/versionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Oliva/Convenios/(\w+)/?$ developer/Controller/convenioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Popeye/Estadisticas/(\w+)/?$ developer/Controller/estadisticasController.php?case=$1 [nc,qsa]
+RewriteRule 	^WhatsAap/WhatsAap/(\w+)/?$ developer/Controller/whatsaapController.php?case=$1 [nc,qsa]
+RewriteRule 	^Brutus/Tarifas/(\w+)/?$ developer/Controller/tarifasController.php?case=$1 [nc,qsa]
+RewriteRule 	^GranPa/Amdcurso/(\w+)/?$ developer/Controller/amdcursoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Inventarios/Inventario/(\w+)/?$ developer/Controller/inventarioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Practicantes/Practicas/(\w+)/?$ developer/Controller/solicitudpracController.php?case=$1 [nc,qsa]
+RewriteRule 	^Enlace/EnlaceEmpre/(\w+)/?$ developer/Controller/enlaceempresarialController.php?case=$1 [nc,qsa]
+RewriteRule 	^Sectores/Empresa/(\w+)/?$ developer/Controller/empresaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Chavito/Proceso/(\w+)/?$ developer/Controller/procesoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Chapatin/Lider/(\w+)/?$ developer/Controller/liderController.php?case=$1 [nc,qsa]
+RewriteRule 	^DonRamon/Inscribete/(\w+)/?$ developer/Controller/inscribeteController.php?case=$1 [nc,qsa]
+RewriteRule 	^Kiko/Induccion/(\w+)/?$ developer/Controller/induccionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Memin/InscripcionLinea/(\w+)/?$ developer/Controller/inscripcionLineaController.php?case=$1 [nc,qsa]
+RewriteRule 	^DonBarriga/Alternancia/(\w+)/?$ developer/Controller/alternanciaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Roblox/InscripcionesAsesor/(\w+)/?$ developer/Controller/inscripcionasesorController.php?case=$1 [nc,qsa]
+RewriteRule 	^Malinda/Restaurarpass/(\w+)/?$ developer/Controller/restaurarpassController.php?case=$1 [nc,qsa]
+RewriteRule 	^Botija/Cargadocente/(\w+)/?$ developer/Controller/cargadocenteController.php?case=$1 [nc,qsa]
+RewriteRule 	^Chompira/Consultacalificaciones/(\w+)/?$ developer/Controller/consultacalificacionesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Oliver/Preinscripcion/(\w+)/?$ developer/Controller/preinscripcionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Lucas/Crearsolicitud/(\w+)/?$ developer/Controller/crearsolicitudController.php?case=$1 [nc,qsa]
+RewriteRule 	^Rocky/Dashadmision/(\w+)/?$ developer/Controller/dashadmisionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Luna/Amdestudiante/(\w+)/?$ developer/Controller/amdestudianteController.php?case=$1 [nc,qsa]
+RewriteRule 	^Jirafales/Amdadenda/(\w+)/?$ developer/Controller/amdadendaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Jirafales/GestionCambio/(\w+)/?$ developer/Controller/gestioncambioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Petaka/Pensum/(\w+)/?$ developer/Controller/pensumController.php?case=$1 [nc,qsa]
+RewriteRule 	^Sonico/OtrasOpciones/(\w+)/?$ developer/Controller/otrasOpcionesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Bunny/OpcionesEdicion/(\w+)/?$ developer/Controller/opcionesEdicionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Petula/Paginacion/(\w+)/?$ developer/Controller/PaginacionController.php?case=$1 [nc,qsa]
+RewriteRule 	^Troya/Opcionmantenimiento/(\w+)/?$ developer/Controller/OpcionmantenimientoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Aquiles/Hojavida/(\w+)/?$ developer/Controller/hojavidaController.php?case=$1 [nc,qsa]
+RewriteRule 	^Roco/Solicitudbae/(\w+)/?$ developer/Controller/solicitudbaeController.php?case=$1 [nc,qsa]
+RewriteRule 	^Yupi/Bienestar/(\w+)/?$ developer/Controller/bienestarController.php?case=$1 [nc,qsa]
+RewriteRule 	^Chito/Solicitudbad/(\w+)/?$ developer/Controller/solicitudbadController.php?case=$1 [nc,qsa]
+RewriteRule 	^Yuca/IndicadoresLogros/(\w+)/?$ developer/Controller/indicadoreslogrosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Guayaba/Colegios/(\w+)/?$ developer/Controller/colegiosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Uva/RegistroIndicadorDocente/(\w+)/?$ developer/Controller/RegistroIndicadorDocenteController.php?case=$1 [nc,qsa]
+RewriteRule 	^Coco/Amdpension/(\w+)/?$ developer/Controller/pensionesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Banana/Jornadas/(\w+)/?$ developer/Controller/jornadasController.php?case=$1 [nc,qsa]
+RewriteRule 	^Mango/Grados/(\w+)/?$ developer/Controller/gradosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Papaya/PeriodoAnio/(\w+)/?$ developer/Controller/periodoanioController.php?case=$1 [nc,qsa]
+RewriteRule 	^Platano/Concepto/(\w+)/?$ developer/Controller/conceptoController.php?case=$1 [nc,qsa]
+RewriteRule 	^Tomate/Costos/(\w+)/?$ developer/Controller/costosController.php?case=$1 [nc,qsa]
+RewriteRule 	^Melon/Lotes/(\w+)/?$ developer/Controller/lotesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Cosas/Utiles/(\w+)/?$ developer/Controller/reportecarnetizacionControler.php?case=$1 [nc,qsa]
+RewriteRule ^Personal/Catalogos/(Listar|Crear|Actualizar)/?$ developer/Controller/personalCatalogController.php?case=$1 [nc,qsa,L]
+
+RewriteRule ^api/v1/sige/salud/?$ developer/Controller/sigeSaludController.php [nc,qsa,L]
+# API SIGE - Eventos de ciclo de vida del carnet (idempotente por id_evento)
+RewriteRule ^api/v1/sige/eventos-carnet/?$ developer/Controller/sigeCarnetEventosController.php [nc,qsa,L]
+
+# API SIGE - Receptor de accesos físicos desde torniquetes
+RewriteRule ^api/v1/sige/accesos/?$ developer/Controller/sigeAccesosController.php [nc,qsa,L]
+
+Options All -Indexes

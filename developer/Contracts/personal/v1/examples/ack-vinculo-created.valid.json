@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174101",
+  "status": "PROCESADO",
+  "codigo": "VINCULO_CREADO",
+  "mensaje": "Vínculo creado en SIGE.",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "persona_version": 2,
+  "vinculo_uuid": "123e4567-e89b-42d3-a456-426614174201"
+}

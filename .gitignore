@@ -1,0 +1,15 @@
+# Archivos pesados y dumps de Base de Datos
+*.sql
+*.log
+cron_estudiantes.log
+error_log
+
+# Carpetas de librerías y componentes pesados/autogenerados
+/bower_components/
+/plugins/
+/artifacts/
+/developer/scratch/
+
+# Archivos temporales o de sistema
+.DS_Store
+Thumbs.db

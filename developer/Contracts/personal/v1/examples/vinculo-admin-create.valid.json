@@ -1,0 +1,15 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174101",
+  "tipo": "VINCULO_CREAR",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "expected_persona_version": 1,
+  "vinculo": {
+    "vinculo_uuid": null,
+    "tipo": "ADMINISTRATIVO",
+    "cargo": { "id": 7, "nombre_snapshot": "SECRETARIA", "version": 3 },
+    "dependencia": { "id": 4, "nombre_snapshot": "ADMISIONES", "version": 2 }
+  },
+  "ocurrido_en": "2026-08-30 16:01:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

@@ -1,0 +1,9 @@
+# Turn rewrite engine on
+Options +FollowSymlinks
+RewriteEngine on
+
+# map neat URL to internal URL
+RewriteRule ^Menu  menu2.php  [nc,qsa]
+
+# RewriteRule ^Menu/(\w+)/?$  menu2.php?id=$1 [nc,qsa]
+# RewriteRule ^cancelartutoria/(\w+)/?$  cancelartutoria.php?id=$1 [nc,qsa]

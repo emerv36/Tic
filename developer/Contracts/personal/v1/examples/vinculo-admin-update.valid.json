@@ -1,0 +1,15 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174110",
+  "tipo": "VINCULO_ACTUALIZAR",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "expected_persona_version": 5,
+  "vinculo": {
+    "vinculo_uuid": "123e4567-e89b-42d3-a456-426614174201",
+    "tipo": "ADMINISTRATIVO",
+    "cargo": { "id": 8, "nombre_snapshot": "COORDINADOR", "version": 3 },
+    "dependencia": { "id": 12, "nombre_snapshot": "BIENESTAR", "version": 2 }
+  },
+  "ocurrido_en": "2026-08-30 16:10:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174103",
+  "status": "PROCESADO",
+  "codigo": "CARNET_ASIGNADO",
+  "mensaje": "Operación procesada.",
+  "persona_uuid": "123e4567-e89b-42d3-a456-426614174200",
+  "persona_version": 4
+}
+

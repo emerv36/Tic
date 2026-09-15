@@ -1,0 +1,9 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174115",
+  "status": "RECHAZADO",
+  "codigo": "CONFLICTO_OBSOLETO",
+  "mensaje": "La versión esperada no coincide.",
+  "persona_uuid": null,
+  "persona_version": null
+}

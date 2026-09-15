@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/estado-institucional-command.schema.json",
+  "title": "Comando atómico de baja o reactivación institucional",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "id_operacion", "tipo", "alcance", "persona_uuid", "expected_persona_version", "vinculo_uuid", "solicitud_talento_humano", "ocurrido_en", "usuario"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "id_operacion": { "$ref": "#/$defs/uuid" },
+    "tipo": { "enum": ["BAJA_INSTITUCIONAL", "REACTIVACION_INSTITUCIONAL"] },
+    "alcance": { "enum": ["VINCULO", "PERSONA"] },
+    "persona_uuid": { "$ref": "#/$defs/uuid" },
+    "expected_persona_version": { "type": "integer", "minimum": 1 },
+    "vinculo_uuid": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+    "solicitud_talento_humano": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "motivo"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "motivo": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "ocurrido_en": { "$ref": "#/$defs/dateTimeBogota" },
+    "usuario": { "$ref": "#/$defs/usuarioCarnetizacion" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "alcance": { "const": "VINCULO" } } },
+      "then": { "properties": { "vinculo_uuid": { "$ref": "#/$defs/uuid" } } },
+      "else": { "properties": { "vinculo_uuid": { "type": "null" } } }
+    }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "dateTimeBogota": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$" },
+    "usuarioCarnetizacion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nombre", "rol"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "nombre": { "type": "string", "minLength": 1, "maxLength": 190 },
+        "rol": { "const": "CARNETIZACION" }
+      }
+    }
+  }
+}

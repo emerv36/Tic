@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/integration-ack.schema.json",
+  "title": "ACK correlacionado de integración SIGE",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "id_operacion", "status", "codigo", "mensaje", "persona_uuid", "persona_version"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "id_operacion": { "$ref": "#/$defs/uuid" },
+    "status": { "enum": ["PROCESADO", "RECHAZADO"] },
+    "codigo": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "mensaje": { "type": "string", "maxLength": 1000 },
+    "persona_uuid": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+    "persona_version": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+    "vinculo_uuid": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "PROCESADO" } } },
+      "then": {
+        "properties": {
+          "persona_uuid": { "$ref": "#/$defs/uuid" },
+          "persona_version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" }
+  }
+}

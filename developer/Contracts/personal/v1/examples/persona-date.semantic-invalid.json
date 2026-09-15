@@ -1,0 +1,18 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174117",
+  "tipo": "PERSONA_CREAR",
+  "persona_uuid": null,
+  "expected_persona_version": 0,
+  "persona": {
+    "tipo_documento": "CC",
+    "numero_documento": "100200302",
+    "nombres": "FECHA",
+    "apellidos": "INVALIDA",
+    "celular": "3001234569",
+    "rh": "O+",
+    "correo": "fecha@example.edu.co"
+  },
+  "ocurrido_en": "2026-02-30 25:70:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}

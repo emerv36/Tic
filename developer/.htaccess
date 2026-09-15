@@ -1,0 +1,11 @@
+# Turn rewrite engine on
+Options +FollowSymlinks
+RewriteEngine on
+
+# map neat URL to internal URL
+#RewriteRule ^login  codelogin.php  [nc,qsa]
+
+RewriteRule ^Lopersa/(\w+)/?$  code.php?case=$1 [nc,qsa]
+RewriteRule ^Lopersa2/(\w+)/?$  calendario.php?case=$1 [nc,qsa]
+RewriteRule ^login/(\w+)/?$  codelogin.php?case=$1 [nc,qsa]
+

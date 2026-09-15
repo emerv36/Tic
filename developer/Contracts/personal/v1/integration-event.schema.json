@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tic.scv.edu.co/contracts/personal/v1/integration-event.schema.json",
+  "title": "Evento versionado SIGE a TIC para personal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "id_evento", "id_operacion", "tipo", "entidad", "persona_uuid", "persona_version", "origen", "ocurrido_en", "data"],
+  "properties": {
+    "contract_version": { "const": "1.0" },
+    "id_evento": { "$ref": "#/$defs/uuid" },
+    "id_operacion": { "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }] },
+    "tipo": { "type": "string" },
+    "entidad": { "type": "string" },
+    "persona_uuid": { "$ref": "#/$defs/uuid" },
+    "persona_version": { "type": "integer", "minimum": 1 },
+    "origen": { "const": "SIGE" },
+    "ocurrido_en": { "$ref": "#/$defs/dateTimeBogota" },
+    "data": { "type": "object" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "tipo": { "enum": ["PERSONA_CREADA", "PERSONA_ACTUALIZADA"] },
+        "entidad": { "const": "PERSONA" },
+        "data": { "$ref": "#/$defs/personaData" }
+      }
+    },
+    {
+      "properties": {
+        "tipo": { "const": "ESTADO_INSTITUCIONAL_CAMBIADO" },
+        "entidad": { "const": "PERSONA" },
+        "data": { "$ref": "#/$defs/estadoInstitucionalData" }
+      }
+    },
+    {
+      "properties": {
+        "tipo": { "enum": ["VINCULO_CREADO", "VINCULO_ACTUALIZADO", "VINCULO_REACTIVADO", "VINCULO_DESACTIVADO"] },
+        "entidad": { "const": "VINCULO" },
+        "data": { "$ref": "#/$defs/vinculoData" }
+      }
+    },
+    {
+      "properties": {
+        "tipo": { "const": "FOTO_ACTUALIZADA" },
+        "entidad": { "const": "FOTO" },
+        "data": { "$ref": "#/$defs/fotoData" }
+      }
+    },
+    {
+      "properties": {
+        "tipo": { "enum": ["CARNET_ASIGNADO", "CARNET_REEMPLAZADO", "CARNET_BLOQUEADO", "CARNET_ENTREGADO"] },
+        "entidad": { "const": "CARNET" },
+        "data": { "$ref": "#/$defs/carnetData" }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "dateTimeBogota": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$" },
+    "catalogoSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nombre_snapshot", "version"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "nombre_snapshot": { "type": "string", "minLength": 1, "maxLength": 190 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "personaData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo_documento", "numero_documento", "nombres", "apellidos", "estado", "vinculos_habilitantes"],
+      "properties": {
+        "tipo_documento": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "numero_documento": { "type": "string", "minLength": 3, "maxLength": 50 },
+        "nombres": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "apellidos": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "estado": { "enum": ["ACTIVA", "INACTIVA"] },
+        "vinculos_habilitantes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "vinculoData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vinculo_uuid", "tipo", "estado", "cargo", "dependencia"],
+      "properties": {
+        "vinculo_uuid": { "$ref": "#/$defs/uuid" },
+        "tipo": { "enum": ["DOCENTE", "ADMINISTRATIVO"] },
+        "estado": { "enum": ["ACTIVO", "INACTIVO"] },
+        "cargo": { "oneOf": [{ "$ref": "#/$defs/catalogoSnapshot" }, { "type": "null" }] },
+        "dependencia": { "oneOf": [{ "$ref": "#/$defs/catalogoSnapshot" }, { "type": "null" }] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "tipo": { "const": "ADMINISTRATIVO" } } },
+          "then": { "properties": { "cargo": { "$ref": "#/$defs/catalogoSnapshot" }, "dependencia": { "$ref": "#/$defs/catalogoSnapshot" } } },
+          "else": { "properties": { "cargo": { "type": "null" }, "dependencia": { "type": "null" } } }
+        }
+      ]
+    },
+    "fotoData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "mime", "bytes"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 del archivo autoritativo normalizado por SIGE." },
+        "mime": { "const": "image/jpeg", "description": "MIME del archivo autoritativo normalizado por SIGE." },
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 5242880 }
+      }
+    },
+    "estadoInstitucionalData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accion", "alcance", "persona_estado", "vinculos_habilitantes", "vinculos_afectados", "carnet", "solicitud_talento_humano_id"],
+      "properties": {
+        "accion": { "enum": ["BAJA_INSTITUCIONAL", "REACTIVACION_INSTITUCIONAL"] },
+        "alcance": { "enum": ["VINCULO", "PERSONA"] },
+        "persona_estado": { "enum": ["ACTIVA", "INACTIVA"] },
+        "vinculos_habilitantes": { "type": "integer", "minimum": 0 },
+        "vinculos_afectados": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/vinculoData" }
+        },
+        "carnet": { "oneOf": [{ "$ref": "#/$defs/carnetData" }, { "type": "null" }] },
+        "solicitud_talento_humano_id": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "carnetData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sige_carnet_id", "uid_rfid", "estado", "motivo", "fecha_emision", "vigencia_hasta", "entregado_en"],
+      "properties": {
+        "sige_carnet_id": { "type": "integer", "minimum": 1 },
+        "uid_rfid": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "estado": { "enum": ["ACTIVO", "INACTIVO"] },
+        "motivo": { "enum": ["NO_APLICA", "PERDIDA", "ROBO", "DETERIORO", "BAJA_INSTITUCIONAL", "BLOQUEO_OPERATIVO"] },
+        "fecha_emision": { "$ref": "#/$defs/dateTimeBogota" },
+        "vigencia_hasta": { "type": "null" },
+        "entregado_en": { "oneOf": [{ "$ref": "#/$defs/dateTimeBogota" }, { "type": "null" }] }
+      }
+    }
+  }
+}

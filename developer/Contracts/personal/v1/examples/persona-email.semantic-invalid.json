@@ -1,0 +1,18 @@
+{
+  "contract_version": "1.0",
+  "id_operacion": "123e4567-e89b-42d3-a456-426614174118",
+  "tipo": "PERSONA_CREAR",
+  "persona_uuid": null,
+  "expected_persona_version": 0,
+  "persona": {
+    "tipo_documento": "CC",
+    "numero_documento": "100200303",
+    "nombres": "CORREO",
+    "apellidos": "INVALIDO",
+    "celular": "3001234570",
+    "rh": "O+",
+    "correo": "correo-invalido"
+  },
+  "ocurrido_en": "2026-08-30 16:18:00",
+  "usuario": { "id": "42", "nombre": "AUXILIAR TIC", "rol": "CARNETIZACION" }
+}
