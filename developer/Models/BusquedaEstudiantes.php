@@ -167,8 +167,10 @@ $estudiantes_res = $query->fetchAll(PDO::FETCH_ASSOC);
                 );
                 $chip = '<button class="btn btn-info" title="Asignar / Vincular Tarjeta RFID" onclick="ModalActivarChip(' . $row['id_inscripcion'] . ',' . "'" . $row['identificacion'] . "'" . ')"><i class="fa fa-id-card-o"></i></button>';
                 
+                $btnRenovacion = '<button type="button" class="btn btn-success btn-xs" title="Renovación de vigencia (mismo carné)" onclick="abrirModalRenovacionSige(' . $idSige . ', ' . $documentoSige . ')"><i class="fa fa-refresh"></i> Renovación</button>';
+
                 $exportarPdf = '<a href="exportar_carnet.php?id='.$row['id_inscripcion'].'" target="_blank" class="btn btn-primary" title="Exportar Carnet PDF"><i class="fa fa-file-pdf-o"></i></a>';
-                $opciones = $editar . ' ' . $chip . ' ' . $exportarPdf . ' ' . $entrega . ' ' . $lote . ' ' . $cambio . ' ' . $programa . ' ' . $recibido . ' ' . $eliminar;
+                $opciones = $editar . ' ' . $chip . ' ' . $btnRenovacion . ' ' . $exportarPdf . ' ' . $entrega . ' ' . $lote . ' ' . $cambio . ' ' . $programa . ' ' . $recibido . ' ' . $eliminar;
                 ?>
 
 

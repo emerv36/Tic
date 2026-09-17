@@ -1222,6 +1222,45 @@ if (empty($_SESSION['SIGE_CSRF_TOKEN'])) $_SESSION['SIGE_CSRF_TOKEN'] = bin2hex(
     </div>
 </div>
 
+<!-- Modal Renovación de Carnet Estudiantil (Mismo Plástico) -->
+<div class="modal fade" id="ModalRenovacionSige" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success" style="color: #fff; background-color: #27ae60;">
+                <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.9;"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="fa fa-refresh"></i> Renovación de Carnet Estudiantil (Mismo Plástico)</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="renovacion-id-inscripcion">
+                <input type="hidden" id="renovacion-uid-rfid">
+                
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <p><b>Documento:</b> <span id="renovacion-documento">---</span></p>
+                        <p><b>Estudiante:</b> <span id="renovacion-nombre-estudiante">---</span></p>
+                        <p><b>UID RFID Actual:</b> <span id="renovacion-uid-display" class="label label-info">---</span></p>
+                        <p><b>Fecha Vencimiento Anterior:</b> <span id="renovacion-fecha-vencimiento" style="font-weight: bold;">---</span></p>
+                        <p><b>Nueva Fecha Vigencia Estimada:</b> <span id="renovacion-fecha-nueva" class="text-success" style="font-weight: bold; font-size: 15px;">---</span> (+6 meses)</p>
+                    </div>
+                </div>
+
+                <div id="renovacion-orden-pendiente" class="alert alert-warning" style="display:none"></div>
+                
+                <div class="checkbox">
+                    <label style="font-weight: bold;">
+                        <input type="checkbox" id="renovacion-confirmado"> Confirmo que el estudiante conserva su carné físico en buen estado y se autoriza prorrogar su vigencia.
+                    </label>
+                </div>
+                <div class="alert alert-danger" id="renovacion-error" style="display:none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" id="renovacion-btn-enviar" class="btn btn-success" onclick="confirmarRenovacionSige()">Confirmar Renovación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="plugins/cropper/cropper.min.js"></script>
 <script src="javascripts/gestionarinscripcion.js?v=<?php echo time(); ?>"></script>
 <script src="https://raw.githack.com/eKoopmans/html2pdf/master/dist/html2pdf.bundle.js"></script>

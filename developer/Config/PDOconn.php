@@ -155,9 +155,4 @@ class db {
         $url = preg_replace ($find, $repl, $url);
         return $url;
     }
-
-    
 }
-
-?>
-

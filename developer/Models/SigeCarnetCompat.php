@@ -184,7 +184,7 @@ class SigeCarnetCompat {
         if ($confirmado !== true) {
             throw new DomainException('La operación requiere confirmación explícita.');
         }
-        $tipos = array('ASIGNACION', 'REEMPLAZO', 'BLOQUEO', 'REACTIVACION_AUTORIZADA');
+        $tipos = array('ASIGNACION', 'REEMPLAZO', 'BLOQUEO', 'REACTIVACION_AUTORIZADA', 'RENOVACION');
         $tipo = strtoupper(trim((string) $tipo));
         if (!in_array($tipo, $tipos, true)) {
             throw new DomainException('Tipo de orden no soportado.');
@@ -220,6 +220,13 @@ class SigeCarnetCompat {
             }
             if ($tipo !== 'ASIGNACION' && !$carnet) {
                 throw new DomainException('No existe un carnet proyectado para esta operación.');
+            }
+            if ($tipo === 'RENOVACION') {
+                if (!$carnet) {
+                    throw new DomainException('El estudiante no tiene carné previo para renovar.');
+                }
+                $uidRfid = (string) ($carnet['uid_rfid'] ?? '');
+                $motivo = $motivo !== '' ? $motivo : 'VENCIMIENTO';
             }
             if ($tipo === 'REEMPLAZO' && strcasecmp($uidRfid, (string) $carnet['uid_rfid']) === 0) {
                 throw new DomainException('El nuevo UID debe ser diferente al carnet reemplazado.');
@@ -373,7 +380,7 @@ class SigeCarnetCompat {
             if (!array_key_exists($campo, $evento)) throw new SigeEventoInvalido('Falta el campo ' . $campo . '.');
         }
         if (!$this->esUuid($evento['id_evento'])) throw new SigeEventoInvalido('id_evento no es un UUID válido.');
-        $tipos = array('CARNET_ASIGNADO', 'CARNET_BLOQUEADO', 'CARNET_REACTIVADO', 'CARNET_REEMPLAZADO', 'CARNET_VENCIDO', 'REACTIVACION_REQUERIDA');
+        $tipos = array('CARNET_ASIGNADO', 'CARNET_BLOQUEADO', 'CARNET_REACTIVADO', 'CARNET_REEMPLAZADO', 'CARNET_VENCIDO', 'REACTIVACION_REQUERIDA', 'CARNET_RENOVADO');
         if (!in_array($evento['tipo'], $tipos, true)) throw new SigeEventoInvalido('Tipo de evento no soportado.');
         $version = filter_var($evento['version_estado'], FILTER_VALIDATE_INT);
         if ($version === false || $version < 1) throw new SigeEventoInvalido('version_estado debe ser un entero positivo.');

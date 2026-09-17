@@ -264,7 +264,7 @@ class SigeCarnet {
         }
         $tipos = array(
             'CARNET_ASIGNADO', 'CARNET_BLOQUEADO', 'CARNET_REACTIVADO',
-            'CARNET_REEMPLAZADO', 'CARNET_VENCIDO'
+            'CARNET_REEMPLAZADO', 'CARNET_VENCIDO', 'CARNET_RENOVADO'
         );
         if (!in_array($evento['tipo'], $tipos, true)) {
             throw new SigeEventoInvalido('Tipo de evento no soportado.');

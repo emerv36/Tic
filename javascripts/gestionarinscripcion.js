@@ -1820,3 +1820,152 @@ function crearOrdenCarnetSige() {
         }
     });
 }
+
+function abrirModalRenovacionSige(idInscripcion, documento) {
+    $('#renovacion-id-inscripcion').val(idInscripcion);
+    $('#renovacion-documento').text(documento);
+    $('#renovacion-nombre-estudiante').text('Cargando…');
+    $('#renovacion-uid-display').text('---');
+    $('#renovacion-uid-rfid').val('');
+    $('#renovacion-fecha-vencimiento').text('---').css('color', '');
+    $('#renovacion-fecha-nueva').text('---');
+    $('#renovacion-error').hide().text('');
+    $('#renovacion-confirmado').prop('checked', false);
+    $('#renovacion-orden-pendiente').hide();
+    $('#renovacion-btn-enviar').prop('disabled', true);
+    
+    $('#ModalRenovacionSige').modal('show');
+
+    // Consultar información del carnet y de la inscripción
+    $.ajax({
+        url: 'Marge/Inscripcion/EstadoCarnetSige',
+        type: 'POST',
+        dataType: 'json',
+        data: {id_inscripcion: idInscripcion},
+        success: function (response) {
+            if (!response.success) {
+                $('#renovacion-error').text(response.mensaje || 'No fue posible consultar el carnet.').show();
+                return;
+            }
+            var carnet = response.data.carnet;
+            if (!carnet) {
+                swal({
+                    title: "Información",
+                    text: "El estudiante no tiene carné previo emitido. Debe usar 'Asignar primer carnet'.",
+                    icon: "info",
+                    button: "Entendido"
+                });
+                $('#ModalRenovacionSige').modal('hide');
+                return;
+            }
+
+            // Establecer datos en el modal
+            $('#renovacion-uid-rfid').val(carnet.uid_rfid || '');
+            $('#renovacion-uid-display').text(carnet.uid_rfid || 'Sin UID');
+            
+            var fechaVigencia = carnet.vigencia_hasta || 'Sin fecha';
+            $('#renovacion-fecha-vencimiento').text(fechaVigencia);
+
+            // Resaltar en rojo si ya está vencida
+            var hoy = new Date();
+            if (carnet.vigencia_hasta) {
+                var fechaVenc = new Date(carnet.vigencia_hasta);
+                if (fechaVenc < hoy) {
+                    $('#renovacion-fecha-vencimiento').css('color', '#d9534f'); // Rojo
+                } else {
+                    $('#renovacion-fecha-vencimiento').css('color', '');
+                }
+            }
+
+            // Calcular nueva fecha estimada (+6 meses desde hoy)
+            var nuevaFechaObj = new Date();
+            nuevaFechaObj.setMonth(nuevaFechaObj.getMonth() + 6);
+            var yyyy = nuevaFechaObj.getFullYear();
+            var mm = String(nuevaFechaObj.getMonth() + 1).padStart(2, '0');
+            var dd = String(nuevaFechaObj.getDate()).padStart(2, '0');
+            var hh = String(nuevaFechaObj.getHours()).padStart(2, '0');
+            var min = String(nuevaFechaObj.getMinutes()).padStart(2, '0');
+            var ss = String(nuevaFechaObj.getSeconds()).padStart(2, '0');
+            var nuevaFechaStr = yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + min + ':' + ss;
+            $('#renovacion-fecha-nueva').text(nuevaFechaStr);
+
+            if (response.data.orden_pendiente) {
+                $('#renovacion-orden-pendiente').text(
+                    'Operación pendiente: ' + response.data.orden_pendiente.tipo +
+                    ' (' + response.data.orden_pendiente.id_operacion + ')'
+                ).show();
+                $('#renovacion-btn-enviar').prop('disabled', true);
+            } else {
+                $('#renovacion-btn-enviar').prop('disabled', false);
+            }
+        },
+        error: function () {
+            $('#renovacion-error').text('No fue posible consultar el estado del carnet.').show();
+        }
+    });
+
+    // Obtener nombre del alumno
+    $.ajax({
+        url: 'Marge/Inscripcion/BuscarInfoEstudiantes',
+        type: 'POST',
+        dataType: 'json',
+        data: {txtRegistroIdentificacion: documento},
+        success: function(json) {
+            if (json && json.success) {
+                $('#renovacion-nombre-estudiante').text(json.nombre_estudiante + ' ' + json.apellido_estudiante);
+            } else {
+                $('#renovacion-nombre-estudiante').text(documento);
+            }
+        },
+        error: function() {
+            $('#renovacion-nombre-estudiante').text(documento);
+        }
+    });
+}
+
+function confirmarRenovacionSige() {
+    var confirmado = $('#renovacion-confirmado').is(':checked');
+    if (!confirmado) {
+        $('#renovacion-error').text('Debe marcar la casilla de confirmación para proceder.').show();
+        return;
+    }
+    var idInscripcion = $('#renovacion-id-inscripcion').val();
+    var uid = $('#renovacion-uid-rfid').val();
+
+    $('#renovacion-btn-enviar').prop('disabled', true);
+    $('#renovacion-error').hide().text('');
+
+    $.ajax({
+        url: 'Marge/Inscripcion/CrearOrdenCarnet',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            csrf_token: window.SIGE_CSRF_TOKEN,
+            id_inscripcion: idInscripcion,
+            tipo: 'RENOVACION',
+            uid_rfid: uid,
+            motivo: 'VENCIMIENTO',
+            confirmado: '1'
+        },
+        success: function (response) {
+            if (!response.success) {
+                $('#renovacion-error').text(response.mensaje || 'La renovación fue rechazada.').show();
+                $('#renovacion-btn-enviar').prop('disabled', false);
+                return;
+            }
+            $('#ModalRenovacionSige').modal('hide');
+            toastr.success('Renovación autorizada y enviada a SIGE exitosamente.');
+            if (typeof BusquedaEstudiantes === 'function') {
+                BusquedaEstudiantes();
+            }
+            if (typeof ListarCarnets === 'function' && $('#tbl_carnet').is(':visible')) {
+                ListarCarnets();
+            }
+        },
+        error: function (xhr) {
+            var response = xhr.responseJSON || {};
+            $('#renovacion-error').text(response.mensaje || 'No fue posible enviar la renovación.').show();
+            $('#renovacion-btn-enviar').prop('disabled', false);
+        }
+    });
+}

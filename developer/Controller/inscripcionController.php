@@ -124,7 +124,14 @@ switch ($case) {
             $rfid = trim($_POST['rfid']);
             $query = $i->ActivarChip($id, $rfid);
             if ($query) {
-                // 1. Generar y despachar orden de carnetización oficial para SIGE Portería
+                // PASO 1: Sincronizar PRIMERO la ficha del estudiante a SIGE (con su fecha_registro)
+                try {
+                    (new SigeWebhook())->enviarEstudiante($id, 'ACTUALIZAR');
+                } catch (Throwable $e) {
+                    error_log('SIGE Outbox Error (ActivarChip - Sync): ' . $e->getMessage());
+                }
+
+                // PASO 2: Emitir y despachar la orden de carnet físico a la API de Comandos de SIGE
                 try {
                     $usuarioOrden = array(
                         'id' => (string)($_SESSION['IN_codigo_usuCA'] ?? '1'),
@@ -134,14 +141,7 @@ switch ($case) {
                     $sigeCarnetCompat->crearOrdenCarnet('ASIGNACION', $id, $rfid, 'NO_APLICA', $usuarioOrden, true);
                     (new SigeOrdenDispatcher())->procesarPendientes(1);
                 } catch (Throwable $e) {
-                    error_log('SIGE Orden Outbox Error (ActivarChip): ' . $e->getMessage());
-                }
-
-                // 2. Sincronizar perfil del estudiante
-                try {
-                    $sigeWebhook->enviarEstudiante($id, 'ACTUALIZAR');
-                } catch (Throwable $e) {
-                    error_log('SIGE Outbox Error (ActivarChip): ' . $e->getMessage());
+                    error_log('SIGE Orden Outbox Error (ActivarChip - Orden): ' . $e->getMessage());
                 }
 
                 $json = json_encode(array("success" => true, "mensaje" => "Chip RFID vinculado exitosamente."));
@@ -760,6 +760,9 @@ switch ($case) {
             $gestionSige = '<button class="btn btn-info" title="Estado y operaciones SIGE" '
                 . 'onclick="abrirGestionCarnetSige(' . $idSige . ', ' . $docSige . ')">'
                 . '<i class="fa fa-id-card"></i></button>';
+            $renovacionSige = '<button type="button" class="btn btn-success btn-xs" title="Renovación de vigencia (mismo carné)" '
+                . 'onclick="abrirModalRenovacionSige(' . $idSige . ', ' . $docSige . ')">'
+                . '<i class="fa fa-refresh"></i> Renovación</button>';
             array_push($createtable['data'], array(
                 $j,
                 $info['identificacion'],
@@ -772,7 +775,7 @@ switch ($case) {
                 $valor_chip,
                 $info['codigo_foto'],
                 $info['fecha_inscripcion'],
-                $recibido . ' ' . $entregado . ' ' . $gestionSige
+                $recibido . ' ' . $entregado . ' ' . $gestionSige . ' ' . $renovacionSige
             ));
             $j++;
             
