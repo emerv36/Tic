@@ -31,7 +31,7 @@ function cargarMenuDelUsuario() {
             Object.values(menuParaElHtml).forEach(function(e) {
                 menuTemplate += `<li class="treeview">`
                 menuTemplate += `
-            <a href="'${e.link}'">
+            <a href="${e.link}">
               <i class="fa fa-dashboard"></i> <span>${e.nombre_menu}</span>
               <span class="pull-right-container">
                 <i class="fa fa-angle-left pull-right"></i>

@@ -59,9 +59,12 @@ function cropCircularImage($source_path, $dest_path, $size = 300) {
         'width' => $min_size,
         'height' => $min_size
     ]);
+    if (!$cropped) $cropped = $source;
     
-    // Resize to target size
+    // Resize to target size with white background
     $resized = imagecreatetruecolor($size, $size);
+    $white = imagecolorallocate($resized, 255, 255, 255);
+    imagefill($resized, 0, 0, $white);
     imagecopyresampled($resized, $cropped, 0, 0, 0, 0, $size, $size, $min_size, $min_size);
     
     // Create circular mask
@@ -69,27 +72,24 @@ function cropCircularImage($source_path, $dest_path, $size = 300) {
     $transparent = imagecolorallocate($mask, 255, 0, 0);
     imagecolortransparent($mask, $transparent);
     imagefilledellipse($mask, $size/2, $size/2, $size, $size, $transparent);
-    $red = imagecolorallocate($mask, 0, 0, 0);
     
+    // Final image with solid white background (prevents FPDF black alpha background)
     $final = imagecreatetruecolor($size, $size);
-    imagealphablending($final, true);
-    imagesavealpha($final, true);
-    $bg = imagecolorallocatealpha($final, 0, 0, 0, 127);
-    imagefill($final, 0, 0, $bg);
+    $white_final = imagecolorallocate($final, 255, 255, 255);
+    imagefill($final, 0, 0, $white_final);
     
     for($x = 0; $x < $size; $x++) {
         for($y = 0; $y < $size; $y++) {
             $c = imagecolorat($mask, $x, $y);
             if($c == $transparent) {
-                $color = imagecolorsforindex($resized, imagecolorat($resized, $x, $y));
-                imagesetpixel($final, $x, $y, imagecolorallocatealpha($final, $color['red'], $color['green'], $color['blue'], 0));
+                imagesetpixel($final, $x, $y, imagecolorat($resized, $x, $y));
             }
         }
     }
     
     imagepng($final, $dest_path);
     imagedestroy($source);
-    imagedestroy($cropped);
+    if ($cropped !== $source) imagedestroy($cropped);
     imagedestroy($resized);
     imagedestroy($mask);
     imagedestroy($final);
@@ -154,8 +154,8 @@ foreach ($estudiantes as $estudiante) {
         $foto_png = sys_get_temp_dir() . "/tmp_carnet_" . $estudiante['identificacion'] . ".png";
         if (file_exists($foto_jpg)) {
             if (cropCircularImage($foto_jpg, $foto_png, 300)) {
-                // Centrado en el ancho (54), foto de 30x30, x = (54-30)/2 = 12. Y = 13
-                $pdf->Image($foto_png, 12, 13, 30, 30);
+                // Centrado en el ancho (54), foto de 30x30, x = (54-30)/2 = 12. Y = 13.8 mm
+                $pdf->Image($foto_png, 12, 13.8, 30, 30);
                 unlink($foto_png);
             }
         }

@@ -103,12 +103,10 @@ class PDF_Carnet_Personal extends FPDF {
 
 function cropCircularImage($source_path, $dest_path, $size = 300) {
     if (!file_exists($source_path)) return false;
+    $raw_data = @file_get_contents($source_path);
+    if ($raw_data === false) return false;
     
-    $mime = mime_content_type($source_path);
-    $source = null;
-    if ($mime == 'image/jpeg') $source = imagecreatefromjpeg($source_path);
-    else if ($mime == 'image/png') $source = imagecreatefrompng($source_path);
-    
+    $source = @imagecreatefromstring($raw_data);
     if (!$source) return false;
 
     $width = imagesx($source);
@@ -122,9 +120,12 @@ function cropCircularImage($source_path, $dest_path, $size = 300) {
         'width' => $min_size,
         'height' => $min_size
     ]);
+    if (!$cropped) $cropped = $source;
     
-    // Resize
+    // Resize with white background
     $resized = imagecreatetruecolor($size, $size);
+    $white = imagecolorallocate($resized, 255, 255, 255);
+    imagefill($resized, 0, 0, $white);
     imagecopyresampled($resized, $cropped, 0, 0, 0, 0, $size, $size, $min_size, $min_size);
     
     // Circular mask
@@ -133,25 +134,23 @@ function cropCircularImage($source_path, $dest_path, $size = 300) {
     imagecolortransparent($mask, $transparent);
     imagefilledellipse($mask, $size/2, $size/2, $size, $size, $transparent);
     
+    // Final image with solid white background (prevents FPDF black alpha background)
     $final = imagecreatetruecolor($size, $size);
-    imagealphablending($final, true);
-    imagesavealpha($final, true);
-    $bg = imagecolorallocatealpha($final, 0, 0, 0, 127);
-    imagefill($final, 0, 0, $bg);
+    $white_final = imagecolorallocate($final, 255, 255, 255);
+    imagefill($final, 0, 0, $white_final);
     
     for($x = 0; $x < $size; $x++) {
         for($y = 0; $y < $size; $y++) {
             $c = imagecolorat($mask, $x, $y);
             if($c == $transparent) {
-                $color = imagecolorsforindex($resized, imagecolorat($resized, $x, $y));
-                imagesetpixel($final, $x, $y, imagecolorallocatealpha($final, $color['red'], $color['green'], $color['blue'], 0));
+                imagesetpixel($final, $x, $y, imagecolorat($resized, $x, $y));
             }
         }
     }
     
     imagepng($final, $dest_path);
     imagedestroy($source);
-    imagedestroy($cropped);
+    if ($cropped !== $source) imagedestroy($cropped);
     imagedestroy($resized);
     imagedestroy($mask);
     imagedestroy($final);
@@ -201,8 +200,8 @@ if ($foto_jpg && file_exists($foto_jpg)) {
     $tmpDir = sys_get_temp_dir();
     $foto_png = $tmpDir . "/tmp_carnet_" . preg_replace('/[^a-zA-Z0-9_-]/', '', $uuid) . ".png";
     if (cropCircularImage($foto_jpg, $foto_png, 300)) {
-        // Coordenadas ajustadas para el nuevo círculo
-        $pdf->Image($foto_png, 15, 17, 24, 24);
+        // Coordenadas ajustadas para el nuevo círculo (Centrado en X=15, Y=15.5, 24x24 mm)
+        $pdf->Image($foto_png, 15, 15.5, 24, 24);
         if (file_exists($foto_png)) {
             unlink($foto_png);
         }

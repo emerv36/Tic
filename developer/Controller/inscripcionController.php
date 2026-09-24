@@ -836,8 +836,8 @@ switch ($case) {
                 $json = json_encode(array("success" => true, "mensaje" => "Correo enviado satisfactoriamente"));
                 
             } else {
-                //si hay error en el envio
-                $json = json_encode(array("success" => false, "mensaje" => $correo->ErrorInfo));
+                // El cambio en DB fue exitoso, pero fallo el envio de correo
+                $json = json_encode(array("success" => true, "mensaje" => "Estado actualizado a REALIZADO. Nota: no se pudo enviar el correo (" . $mail->ErrorInfo . ")"));
                 
             }
             
@@ -893,8 +893,8 @@ switch ($case) {
                 $json = json_encode(array("success" => true, "mensaje" => "Correo enviado satisfactoriamente"));
                 
             } else {
-                //si hay error en el envio
-                $json = json_encode(array("success" => false, "mensaje" => $correo->ErrorInfo));
+                // El cambio en DB fue exitoso, pero fallo el envio de correo
+                $json = json_encode(array("success" => true, "mensaje" => "Estado actualizado a ENTREGADO. Nota: no se pudo enviar el correo (" . $mail->ErrorInfo . ")"));
                 
             }
             
