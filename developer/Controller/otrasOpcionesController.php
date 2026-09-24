@@ -25,7 +25,7 @@ $mail->SMTPDebug  = 0;
 $mail->Host = 'smtp.gmail.com';
 $mail->Port = 587;
 $mail->Username = "info@scv.edu.co";
-$mail->Password = "info2021*";
+$mail->Password = str_replace(' ', '', "wcdt hhon vvku zzlg");
 $mail->Charset='utf-8';
 $mail->SetFrom('info@scv.edu.co',utf8_decode('System Center ¡Módulo Programado!'));
 $mail->AltBody = "";

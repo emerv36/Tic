@@ -10,6 +10,6 @@
  $mail->Host = 'smtp.gmail.com';
  $mail->Port = 587;
  $mail->Username = "info@scv.edu.co";
- $mail->Password = "info2021*";
+ $mail->Password = str_replace(' ', '', "wcdt hhon vvku zzlg");
  $mail->Charset='utf-8';
 ?>

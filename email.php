@@ -12,7 +12,7 @@ $mail->Host = "smtp.gmail.com";
 $mail->Port = 587;
 
 $mail->Username = "info@scv.edu.co";
-$mail->Password = "info2021*";
+$mail->Password = str_replace(' ', '', "wcdt hhon vvku zzlg");
 $mail->SetFrom('info@scv.edu.co', utf8_decode('Nuevo Usuario SIIGA'));
 $mail->Subject = utf8_decode("Bienvenido registro de usuario SIIGA");
 $txtcorreo='asesorscv2021@gmail.com';

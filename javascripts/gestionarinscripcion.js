@@ -1594,7 +1594,9 @@ function CambiarRecibido() {
             if (json.success == true) {
                 toastr.success(json.mensaje);
                 $("#modalcambiarrecibido").modal("hide");
-                ListarCarnet();
+                if ($.trim($("#txtcmblote").val()) !== '') {
+                    ListarCarnet();
+                }
                 BusquedaEstudiantes();
             } else {
                 toastr.error(json.mensaje);
@@ -1625,7 +1627,9 @@ function CambiarEntregado() {
             if (json.success == true) {
                 toastr.success(json.mensaje);
                 $("#modalcambiarentregado").modal("hide");
-                ListarCarnet();
+                if ($.trim($("#txtcmblote").val()) !== '') {
+                    ListarCarnet();
+                }
                 BusquedaEstudiantes();
             } else {
                 toastr.error(json.mensaje);

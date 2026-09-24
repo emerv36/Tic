@@ -351,14 +351,33 @@ switch ($case) {
             $correo = $buscar['email_estudiante'];
             
             // Preparación de correo (silencioso para no bloquear el éxito del registro)
-            $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>";
-            $html .= '<img src="https://scv.edu.co/portal/wp-content/uploads/2020/11/logo-hotizontal.png"/><br>';
-            $html .= "<b><h2>¡Proceso de carnetización exitoso!</h2></b>";
-            $html .= "Estimado(a) <b>" . $buscar['nombre_estudiante'] . " " . $buscar['apellido_estudiante'] . "</b>,<br>";
-            $html .= "Informamos que tu carnet se encuentra en estado <strong>PROCESO</strong>. Estará listo en un plazo de 15 días en la sede <b>" . ucwords(strtolower($buscar['lugar_reclamo'])) . "</b>.<br>";
-            $html .= "<hr><ul><li><b>Nombre:</b> " . $buscar['nombre_estudiante'] . " " . $buscar['apellido_estudiante'] . "</li>";
-            $html .= "<li><b>Fecha:</b> " . $buscar['fecha_inscripcion'] . "</li></ul><hr>";
-            $html .= "Consulta el estado en: <a href='http://tic.scv.edu.co/verificacion'>http://tic.scv.edu.co/verificacion</a></body></html>";
+            $fechaInscripcion = !empty($buscar['fecha_inscripcion']) ? date('d/m/Y h:i A', strtotime($buscar['fecha_inscripcion'])) : date('d/m/Y h:i A');
+            $nombreEstudiante = ucwords(strtolower(trim($buscar['nombre_estudiante'] . ' ' . $buscar['apellido_estudiante'])));
+            $lugarReclamoReg = ucwords(strtolower(trim($buscar['lugar_reclamo'] ?? 'Principal')));
+
+            $html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Registro Carnet</title></head>';
+            $html .= '<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: \'Segoe UI\', Arial, sans-serif; color: #334155;">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px;"><tr><td align="center">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">';
+            $html .= '<tr><td align="center" style="background-color: #ffffff; padding: 25px 20px; border-bottom: 3px solid #0284c7;">';
+            $html .= '<img src="http://tic.scv.edu.co/assets/images/logoNuevo.png" alt="System Center" style="max-width: 280px; width: 80%; height: auto; display: block;" />';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="padding: 25px 30px 10px 30px;">';
+            $html .= '<span style="display: inline-block; background-color: #f59e0b; color: #ffffff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">PROCESO DE CARNETIZACIÓN INICIADO</span>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td style="padding: 15px 30px 25px 30px;">';
+            $html .= '<h2 style="color: #0f172a; font-size: 20px; margin-top: 0; font-weight: 600; text-align: center;">¡Estimado(a) ' . $nombreEstudiante . '!</h2>';
+            $html .= '<p style="font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 25px;">Te informamos que tu solicitud de carnet se encuentra en estado <strong>PROCESO</strong>. Estará listo en un plazo aproximado de 15 días en la sede <b>' . $lugarReclamoReg . '</b>.</p>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">';
+            $html .= '<tr><td style="padding: 15px 20px;"><table border="0" cellpadding="0" cellspacing="0" width="100%">';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 140px;">Estudiante:</td><td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600;">' . $nombreEstudiante . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Sede de Reclamo:</td><td style="padding: 6px 0; font-size: 14px; color: #0284c7; font-weight: 700;">' . $lugarReclamoReg . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Fecha Registro:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $fechaInscripcion . '</td></tr>';
+            $html .= '</table></td></tr></table>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;"><tr><td align="center"><a href="http://tic.scv.edu.co/verificacion" target="_blank" style="display: inline-block; background-color: #0056b3; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Consultar Estado del Carnet</a></td></tr></table>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">Instituto Centro de Sistemas S.A.S. - System Center<br>Departamento de Tecnologías de la Información</td></tr>';
+            $html .= '</table></td></tr></table></body></html>';
             
             $mail->MsgHTML($html);
             $mail->SetFrom('info@scv.edu.co', utf8_decode('Registro de Carnet - System Center'));
@@ -791,39 +810,60 @@ switch ($case) {
         $resultado = $i->CambiarRecibido($txtid);
         
         if ($resultado) {
-            // El UPDATE ya encoló el cambio mediante trigger; intentar despacho inmediato.
+            // Respuesta instantánea al navegador para cerrar el modal de inmediato (<50ms)
+            $response = json_encode(array("success" => true, "mensaje" => "Estado actualizado a REALIZADO satisfactoriamente"));
+            header('Content-Type: application/json');
+            header('Content-Length: ' . strlen($response));
+            header('Connection: close');
+            echo $response;
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } else {
+                if (ob_get_level()) { ob_end_flush(); }
+                flush();
+            }
+
+            // Tareas en segundo plano (Webhook SIGE + Envío de correo PHPMailer)
             try { $sigeWebhook->procesarPendientes(1); } catch (Throwable $e) { error_log('SIGE Outbox Error (CambiarRecibido): ' . $e->getMessage()); }
             $info = $i->EnviarEmailRecibidoLote($txtid);
-            $txtnombre = $info['nombre_estudiante'] . ' ' . $info['apellido_estudiante'];
-            $txtcorreo = $info['email_estudiante'];
-            $txtprograma = $info['nombre_programa'];
-            $tiposangre = $info['tipo_sangre'];
-            $identidad = $info['identificacion'];
-            $nombre_identidad = $info['nombre_identidad'];
-            $html = "<!DOCTYPE html>";
-            $html .= "<html>";
-            $html .= "<head>";
-            $html .= "<body>";
-            //$html .= '<img src="https://scv.edu.co/portal/wp-content/uploads/2023/03/Mesa-de-trabajo-2.png"/><br>';
-            $html .= '<img src="https://scv.edu.co/portal/wp-content/uploads/2020/11/logo-hotizontal.png"/><br>';
-            $html .= 'Hola:<strong>,' . ucwords(strtolower($txtnombre)) . ' ' . '</strong>El departamento de nuevas tecnologias<strong>SYSTEM CENTER</strong><br>';
-            $html .= 'Informa que tú carnet estudiantil ya se encuentra <strong>LISTO</strong> para reclamar puedes dirigirte a la instalación departamento de nuevas tecnologias en la sede <b>' . ucwords(strtolower($info['lugar_reclamo'])) . '</b><br>';
-            $html .= 'Horario de LUNES DE VIENES 8:00 am - 4:00 pm<br>';
-            $html .= '<br>';
-            $html .= '<hr>';
-            $html .= '<ul>';
-            $html .= '<li><b>Nombre:</b>' . ' ' . ucwords(strtolower($txtnombre));
-            $html .= '<li><b>Programa académico:</b>' . ' ' . ucwords(strtolower($info['nombre_programa']));
-            $html .= '<li><b>Fecha notificación:</b>' . ' ' . $info['fecha_recibido_carnet'];
-            $html .= '</ul>';
-            $html .= '<hr>';
-            $html .= 'Puedes consultar el estdo de tu carnet en la siguiente direccion<br>';
-            $html .= 'http://tic.scv.edu.co/verificacion<br>';
-            $html .= '</body>';
-            $html .= '</html>';
+            $txtnombre = ucwords(strtolower(trim(($info['nombre_estudiante'] ?? '') . ' ' . ($info['apellido_estudiante'] ?? ''))));
+            $txtcorreo = $info['email_estudiante'] ?? '';
+            $txtprograma = ucwords(strtolower(trim($info['nombre_programa'] ?? '')));
+            $identidad = $info['identificacion'] ?? '';
+            $nombre_identidad = $info['nombre_identidad'] ?? 'C.C';
+            $lugar_reclamo = ucwords(strtolower(trim($info['lugar_reclamo'] ?? 'Principal')));
+            $fechaNotificacion = !empty($info['fecha_recibido_carnet']) ? date('d/m/Y h:i A', strtotime($info['fecha_recibido_carnet'])) : date('d/m/Y h:i A');
+
+            $html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Carnet Listo</title></head>';
+            $html .= '<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: \'Segoe UI\', Arial, sans-serif; color: #334155;">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px;"><tr><td align="center">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">';
+            $html .= '<tr><td align="center" style="background-color: #ffffff; padding: 25px 20px; border-bottom: 3px solid #0284c7;">';
+            $html .= '<img src="http://tic.scv.edu.co/assets/images/logoNuevo.png" alt="System Center" style="max-width: 280px; width: 80%; height: auto; display: block;" />';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="padding: 25px 30px 10px 30px;">';
+            $html .= '<span style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">CARNET LISTO PARA RECLAMAR</span>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td style="padding: 15px 30px 25px 30px;">';
+            $html .= '<h2 style="color: #0f172a; font-size: 20px; margin-top: 0; font-weight: 600; text-align: center;">¡Hola, ' . $txtnombre . '!</h2>';
+            $html .= '<p style="font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 25px;">El Departamento de Tecnologías de la Información de <strong>SYSTEM CENTER</strong> te informa que tu carnet estudiantil ya se encuentra <strong>LISTO</strong> para reclamar.</p>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">';
+            $html .= '<tr><td style="padding: 15px 20px;"><table border="0" cellpadding="0" cellspacing="0" width="100%">';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 140px;">Estudiante:</td><td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600;">' . $txtnombre . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Identificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $nombre_identidad . ' ' . $identidad . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Programa:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $txtprograma . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Sede Reclamo:</td><td style="padding: 6px 0; font-size: 14px; color: #0284c7; font-weight: 700;">' . $lugar_reclamo . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Fecha Notificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $fechaNotificacion . '</td></tr>';
+            $html .= '</table></td></tr></table>';
+            $html .= '<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 4px; margin-bottom: 25px;"><p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">⏰ <strong>Horario de atención:</strong> Lunes a Viernes 8:00 am - 4:00 pm.<br>📍 <strong>Lugar de reclamo:</strong> Departamento de Tecnologías de la Información en la sede <b>' . $lugar_reclamo . '</b>.</p></div>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;"><tr><td align="center"><a href="http://tic.scv.edu.co/verificacion" target="_blank" style="display: inline-block; background-color: #0056b3; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Consultar Estado del Carnet</a></td></tr></table>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">Instituto Centro de Sistemas S.A.S. - System Center<br>Departamento de Tecnologías de la Información</td></tr>';
+            $html .= '</table></td></tr></table></body></html>';
+
             $mail->MsgHTML($html);
-            $mail->SetFrom('info@scv.edu.co', utf8_decode('System Center - Nuevas tecnologias'));
-            $mail->Subject = utf8_decode("Tu carnét listo para entrega" . " - " . $identidad);
+            $mail->SetFrom('info@scv.edu.co', utf8_decode('System Center - Tecnologías de la información'));
+            $mail->Subject = utf8_decode("Tu carnet listo para entrega - " . $identidad);
             $mail->AddAddress($txtcorreo);
             $mail->IsHTML(true);
             $mail->smtpConnect(array("ssl" => array(
@@ -832,14 +872,8 @@ switch ($case) {
                 "allow_self_signed" => true
             )));
             
-            if ($mail->Send()) {
-                $json = json_encode(array("success" => true, "mensaje" => "Correo enviado satisfactoriamente"));
-                
-            } else {
-                // El cambio en DB fue exitoso, pero fallo el envio de correo
-                $json = json_encode(array("success" => true, "mensaje" => "Estado actualizado a REALIZADO. Nota: no se pudo enviar el correo (" . $mail->ErrorInfo . ")"));
-                
-            }
+            $mail->Send();
+            exit();
             
         } else {
             $json = json_encode(array("success" => false, "mensaje" => "¡No se pueden registrar los cambios.!"));
@@ -851,33 +885,53 @@ switch ($case) {
         $txtid = $_POST['Einscripcion'] ?? $_POST['ECidinsripcion'] ?? $_POST['Linscripcion'] ?? null;
         $resultado = $i->CambiarEntregado($txtid);
         if ($resultado) {
+            // Respuesta instantánea al navegador para cerrar el modal de inmediato (<50ms)
+            $response = json_encode(array("success" => true, "mensaje" => "Estado actualizado a ENTREGADO satisfactoriamente"));
+            header('Content-Type: application/json');
+            header('Content-Length: ' . strlen($response));
+            header('Connection: close');
+            echo $response;
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } else {
+                if (ob_get_level()) { ob_end_flush(); }
+                flush();
+            }
+
+            // Tareas en segundo plano (Envío de correo PHPMailer)
             $info = $i->EnviarEmailRecibidoLote($txtid);
-            $txtnombre = $info['nombre_estudiante'] . ' ' . $info['apellido_estudiante'];
-            $txtcorreo = $info['email_estudiante'];
-            $txtprograma = $info['nombre_programa'];
-            $tiposangre = $info['tipo_sangre'];
-            $identidad = $info['identificacion'];
-            $nombre_identidad = $info['nombre_identidad'];
-            $fecha = $info['fecha_recibido_carnet'];
-            $html = "<!DOCTYPE html>";
-            $html .= "<html>";
-            $html .= "<head>";
-            $html .= "<body>";
-            //$html .= '<img src="https://scv.edu.co/portal/wp-content/uploads/2023/03/Mesa-de-trabajo-2.png"/><br>';
-            $html .= '<img src="https://scv.edu.co/portal/wp-content/uploads/2020/11/logo-hotizontal.png"/><br>';
-            $html .= 'Felicitaciones :<strong>' . ucwords(strtolower($txtnombre)) . ' ' . '</strong>El departamento de tecnologias de la información<strong> SYSTEM CENTER</strong><br>';
-            $html .= 'Informa que tú carnet estudiantil ha sido entregado exitosamente!<br>';
-            $html .= 'Tenga en cuenta las siguientes recomendaciones:<br>';
-            $html .= '<hr>';
-            $html .= '<ul>';
-            $html .= '<li>Debes portar el carnet en un sitio visible en nuestra instalación,recuerda que es tú identificación SYSTEMISTA';
-            $html .= '<li>En caso de pérdida debes realizar el proceso de RENOVACION este tiene un costo de $10.000';
-            $html .= '<li>Si eres estudiante en etapa PRODUCTIVA (realizando prácticas) el costo de renovación es de $22.600';
-            $html .= '<li>Fecha notificación:' . ' ' . $fecha;
-            $html .= '</ul>';
-            $html .= '<hr>';
-            $html .= '</body>';
-            $html .= '</html>';
+            $txtnombre = ucwords(strtolower(trim(($info['nombre_estudiante'] ?? '') . ' ' . ($info['apellido_estudiante'] ?? ''))));
+            $txtcorreo = $info['email_estudiante'] ?? '';
+            $txtprograma = ucwords(strtolower(trim($info['nombre_programa'] ?? '')));
+            $identidad = $info['identificacion'] ?? '';
+            $nombre_identidad = $info['nombre_identidad'] ?? 'C.C';
+            $fechaNotificacion = !empty($info['fecha_recibido_carnet']) ? date('d/m/Y h:i A', strtotime($info['fecha_recibido_carnet'])) : date('d/m/Y h:i A');
+
+            $html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Carnet Entregado</title></head>';
+            $html .= '<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: \'Segoe UI\', Arial, sans-serif; color: #334155;">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px;"><tr><td align="center">';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">';
+            $html .= '<tr><td align="center" style="background-color: #ffffff; padding: 25px 20px; border-bottom: 3px solid #0284c7;">';
+            $html .= '<img src="http://tic.scv.edu.co/assets/images/logoNuevo.png" alt="System Center" style="max-width: 280px; width: 80%; height: auto; display: block;" />';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="padding: 25px 30px 10px 30px;">';
+            $html .= '<span style="display: inline-block; background-color: #0284c7; color: #ffffff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">CARNET ENTREGADO EXITOSAMENTE</span>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td style="padding: 15px 30px 25px 30px;">';
+            $html .= '<h2 style="color: #0f172a; font-size: 20px; margin-top: 0; font-weight: 600; text-align: center;">¡Felicitaciones, ' . $txtnombre . '!</h2>';
+            $html .= '<p style="font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 25px;">El Departamento de Tecnologías de la Información de <strong>SYSTEM CENTER</strong> informa que tu carnet estudiantil ha sido entregado exitosamente.</p>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">';
+            $html .= '<tr><td style="padding: 15px 20px;"><table border="0" cellpadding="0" cellspacing="0" width="100%">';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 140px;">Estudiante:</td><td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600;">' . $txtnombre . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Identificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $nombre_identidad . ' ' . $identidad . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Programa:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $txtprograma . '</td></tr>';
+            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Fecha Notificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $fechaNotificacion . '</td></tr>';
+            $html .= '</table></td></tr></table>';
+            $html .= '<div style="background-color: #f0fdf4; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 4px; margin-bottom: 25px;"><p style="margin: 0; font-size: 13px; color: #0369a1; line-height: 1.5;">📌 <strong>Recomendaciones importantes:</strong><br>• Debes portar tu carnet en un lugar visible en las instalaciones de System Center.<br>• En caso de pérdida, el costo de renovación es de $10.000 ($22.600 en etapa productiva).</p></div>';
+            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;"><tr><td align="center"><a href="http://tic.scv.edu.co/verificacion" target="_blank" style="display: inline-block; background-color: #0056b3; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Consultar Estado del Carnet</a></td></tr></table>';
+            $html .= '</td></tr>';
+            $html .= '<tr><td align="center" style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">Instituto Centro de Sistemas S.A.S. - System Center<br>Departamento de Tecnologías de la Información</td></tr>';
+            $html .= '</table></td></tr></table></body></html>';
             $mail->MsgHTML($html);
             $mail->SetFrom('info@scv.edu.co', utf8_decode('System Center - Tecnologias de la información'));
             $mail->Subject = utf8_decode("¡Hemos entregado tú carnet proceso finalizado!" . " - " . $identidad);
@@ -889,14 +943,8 @@ switch ($case) {
                 "allow_self_signed" => true
             )));
             
-            if ($mail->Send()) {
-                $json = json_encode(array("success" => true, "mensaje" => "Correo enviado satisfactoriamente"));
-                
-            } else {
-                // El cambio en DB fue exitoso, pero fallo el envio de correo
-                $json = json_encode(array("success" => true, "mensaje" => "Estado actualizado a ENTREGADO. Nota: no se pudo enviar el correo (" . $mail->ErrorInfo . ")"));
-                
-            }
+            $mail->Send();
+            exit();
             
         } else {
             $json = json_encode(array("success" => false, "mensaje" => "¡No se pueden registrar los cambios.!"));
