@@ -7,12 +7,18 @@ SetEnv SIGE_OUTBOUND_API_KEY l03cced09c86029cf38534ec54a4
 Options +FollowSymlinks
 RewriteEngine on
 
-# Pass Authorization Header to PHP in Apache / FastCGI / LiteSpeed
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+# Excepciones para archivos y directorios físicos existentes
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
 # map neat URL to internal URL
+RewriteRule 	^acuse.php$ acuse.php [L,QSA]
+RewriteRule 	^AcuseConfirmacion/?$  developer/Controller/loginController.php?case=ConfirmarAcuseRecibo [nc,qsa,L]
 RewriteRule 	^RecuperarCuenta/(\w+)/?$  cambiarpasswor.php?x=$1 [nc,qsa]
 RewriteRule 	^ValidarEmailReal/(\w+)/?$  confirmaremail.php?x=$1 [nc,qsa]
+RewriteRule 	^AcuseRecibo/?$  confirmar_recibo.php [nc,qsa,L]
+RewriteRule 	^confirmar_recibo/?$  confirmar_recibo.php [nc,qsa,L]
 
 # map neat URL to internal URL
 RewriteRule 	^clogin/(\w+)/?$  developer/codelogin.php?case=$1 [nc,qsa]
@@ -25,6 +31,7 @@ RewriteRule 	^crearempresa      			crearempresa.php  [nc,qsa]
 RewriteRule 	^alternancia       			alternancia.php  [nc,qsa]
 RewriteRule 	^Registraralternancia       Registraralternancia.php  [nc,qsa]
 RewriteRule 	^alternanciaArticulacion    alternanciaArticulacion.php  [nc,qsa]
+RewriteRule 	^ConfirmarEntrega/?$  acuse.php  [nc,qsa,L]
 RewriteRule 	^Verificacion  verificarCarnet.php  [nc,qsa]
 
 RewriteRule 	^Menu  component/menu2.php  [nc,qsa]
@@ -110,6 +117,7 @@ RewriteRule 	^Papaya/PeriodoAnio/(\w+)/?$ developer/Controller/periodoanioContro
 RewriteRule 	^Platano/Concepto/(\w+)/?$ developer/Controller/conceptoController.php?case=$1 [nc,qsa]
 RewriteRule 	^Tomate/Costos/(\w+)/?$ developer/Controller/costosController.php?case=$1 [nc,qsa]
 RewriteRule 	^Melon/Lotes/(\w+)/?$ developer/Controller/lotesController.php?case=$1 [nc,qsa]
+RewriteRule 	^Cosas/Utiles/AcuseRecibo/?$ confirmar_recibo.php [nc,qsa,L]
 RewriteRule 	^Cosas/Utiles/(\w+)/?$ developer/Controller/reportecarnetizacionControler.php?case=$1 [nc,qsa]
 RewriteRule ^Personal/Catalogos/(Listar|Crear|Actualizar)/?$ developer/Controller/personalCatalogController.php?case=$1 [nc,qsa,L]
 

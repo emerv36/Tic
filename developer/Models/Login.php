@@ -164,7 +164,7 @@ public function Iniciarsesion($usuario){
     if (!empty($_SERVER['HTTP_X_FORWARDED_FOR']))
         return $_SERVER['HTTP_X_FORWARDED_FOR'];
    
-    return $_SERVER['REMOTE_ADDR'];
+    return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
 }
 //funcion para verificar el carnet

@@ -9,6 +9,7 @@ require('../Services/SigeStudentOutbox.php');
 require_once('../Services/SigeWebhook.php');
 require_once('../Services/SigeOrdenDispatcher.php');
 require_once('../Models/SigeCarnetCompat.php');
+require_once('../Services/MailAcuseService.php');
 //envio de email
 //require("../../class/html2pdf_v4.03/html2pdf.class.php");
 
@@ -898,52 +899,66 @@ switch ($case) {
                 flush();
             }
 
-            // Tareas en segundo plano (Envío de correo PHPMailer)
+            // Tareas en segundo plano (Envío de correo PHPMailer con Acuse de Recibo)
             $info = $i->EnviarEmailRecibidoLote($txtid);
             $txtnombre = ucwords(strtolower(trim(($info['nombre_estudiante'] ?? '') . ' ' . ($info['apellido_estudiante'] ?? ''))));
-            $txtcorreo = $info['email_estudiante'] ?? '';
+            $txtcorreo = trim($info['email_estudiante'] ?? '');
             $txtprograma = ucwords(strtolower(trim($info['nombre_programa'] ?? '')));
             $identidad = $info['identificacion'] ?? '';
             $nombre_identidad = $info['nombre_identidad'] ?? 'C.C';
             $fechaNotificacion = !empty($info['fecha_recibido_carnet']) ? date('d/m/Y h:i A', strtotime($info['fecha_recibido_carnet'])) : date('d/m/Y h:i A');
 
-            $html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Carnet Entregado</title></head>';
-            $html .= '<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: \'Segoe UI\', Arial, sans-serif; color: #334155;">';
-            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px;"><tr><td align="center">';
-            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">';
-            $html .= '<tr><td align="center" style="background-color: #ffffff; padding: 25px 20px; border-bottom: 3px solid #0284c7;">';
-            $html .= '<img src="http://tic.scv.edu.co/assets/images/logoNuevo.png" alt="System Center" style="max-width: 280px; width: 80%; height: auto; display: block;" />';
-            $html .= '</td></tr>';
-            $html .= '<tr><td align="center" style="padding: 25px 30px 10px 30px;">';
-            $html .= '<span style="display: inline-block; background-color: #0284c7; color: #ffffff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">CARNET ENTREGADO EXITOSAMENTE</span>';
-            $html .= '</td></tr>';
-            $html .= '<tr><td style="padding: 15px 30px 25px 30px;">';
-            $html .= '<h2 style="color: #0f172a; font-size: 20px; margin-top: 0; font-weight: 600; text-align: center;">¡Felicitaciones, ' . $txtnombre . '!</h2>';
-            $html .= '<p style="font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 25px;">El Departamento de Tecnologías de la Información de <strong>SYSTEM CENTER</strong> informa que tu carnet estudiantil ha sido entregado exitosamente.</p>';
-            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">';
-            $html .= '<tr><td style="padding: 15px 20px;"><table border="0" cellpadding="0" cellspacing="0" width="100%">';
-            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 140px;">Estudiante:</td><td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600;">' . $txtnombre . '</td></tr>';
-            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Identificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $nombre_identidad . ' ' . $identidad . '</td></tr>';
-            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Programa:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $txtprograma . '</td></tr>';
-            $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Fecha Notificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $fechaNotificacion . '</td></tr>';
-            $html .= '</table></td></tr></table>';
-            $html .= '<div style="background-color: #f0fdf4; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 4px; margin-bottom: 25px;"><p style="margin: 0; font-size: 13px; color: #0369a1; line-height: 1.5;">📌 <strong>Recomendaciones importantes:</strong><br>• Debes portar tu carnet en un lugar visible en las instalaciones de System Center.<br>• En caso de pérdida, el costo de renovación es de $10.000 ($22.600 en etapa productiva).</p></div>';
-            $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;"><tr><td align="center"><a href="http://tic.scv.edu.co/verificacion" target="_blank" style="display: inline-block; background-color: #0056b3; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Consultar Estado del Carnet</a></td></tr></table>';
-            $html .= '</td></tr>';
-            $html .= '<tr><td align="center" style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">Instituto Centro de Sistemas S.A.S. - System Center<br>Departamento de Tecnologías de la Información</td></tr>';
-            $html .= '</table></td></tr></table></body></html>';
-            $mail->MsgHTML($html);
-            $mail->SetFrom('info@scv.edu.co', utf8_decode('System Center - Tecnologias de la información'));
-            $mail->Subject = utf8_decode("¡Hemos entregado tú carnet proceso finalizado!" . " - " . $identidad);
-            $mail->AddAddress($txtcorreo);
-            $mail->IsHTML(true);
-            $mail->smtpConnect(array("ssl" => array(
-                "verify_peer" => false,
-                "verify_peer_name" => false,
-                "allow_self_signed" => true
-            )));
-            
-            $mail->Send();
+            if (!empty($txtcorreo)) {
+                $mailAcuseService = new MailAcuseService();
+                $asuntoCorreo = "¡Hemos entregado tú carnet proceso finalizado!" . " - " . $identidad;
+                
+                // Registrar el envío en la base de datos y obtener token + URL pública
+                $datosAcuse = $mailAcuseService->registrarEnvioCorreo($txtcorreo, $asuntoCorreo, $identidad, 'CARNETIZACION');
+                $htmlBotonAcuse = $mailAcuseService->generarHtmlBotonAcuse($datosAcuse['url_acuse'], 5);
+
+                $html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Carnet Entregado</title></head>';
+                $html .= '<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: \'Segoe UI\', Arial, sans-serif; color: #334155;">';
+                $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px;"><tr><td align="center">';
+                $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">';
+                $html .= '<tr><td align="center" style="background-color: #ffffff; padding: 25px 20px; border-bottom: 3px solid #0284c7;">';
+                $html .= '<img src="http://tic.scv.edu.co/assets/images/logoNuevo.png" alt="System Center" style="max-width: 280px; width: 80%; height: auto; display: block;" />';
+                $html .= '</td></tr>';
+                $html .= '<tr><td align="center" style="padding: 25px 30px 10px 30px;">';
+                $html .= '<span style="display: inline-block; background-color: #0284c7; color: #ffffff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 6px 16px; border-radius: 20px;">CARNET ENTREGADO EXITOSAMENTE</span>';
+                $html .= '</td></tr>';
+                $html .= '<tr><td style="padding: 15px 30px 25px 30px;">';
+                $html .= '<h2 style="color: #0f172a; font-size: 20px; margin-top: 0; font-weight: 600; text-align: center;">¡Felicitaciones, ' . $txtnombre . '!</h2>';
+                $html .= '<p style="font-size: 14px; line-height: 1.6; color: #475569; text-align: center; margin-bottom: 25px;">El Departamento de Tecnologías de la Información de <strong>SYSTEM CENTER</strong> informa que tu carnet estudiantil ha sido entregado exitosamente.</p>';
+                $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">';
+                $html .= '<tr><td style="padding: 15px 20px;"><table border="0" cellpadding="0" cellspacing="0" width="100%">';
+                $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600; width: 140px;">Estudiante:</td><td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600;">' . $txtnombre . '</td></tr>';
+                $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Identificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $nombre_identidad . ' ' . $identidad . '</td></tr>';
+                $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Programa:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $txtprograma . '</td></tr>';
+                $html .= '<tr><td style="padding: 6px 0; font-size: 13px; color: #64748b; font-weight: 600;">Fecha Notificación:</td><td style="padding: 6px 0; font-size: 14px; color: #334155;">' . $fechaNotificacion . '</td></tr>';
+                $html .= '</table></td></tr></table>';
+
+                // Insertar el Botón de Acuse de Recibo y la Cláusula de Silencio Positivo
+                $html .= $htmlBotonAcuse;
+
+                $html .= '<div style="background-color: #f0fdf4; border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 6px; margin-bottom: 25px;"><p style="margin: 0; font-size: 13px; color: #0369a1; line-height: 1.6;">📌 <strong>Recomendaciones importantes:</strong><br>• Debes portar tu carnet en un lugar visible dentro de las instalaciones de System Center.<br>• Tu carnet físico <strong>no expira</strong>; sin embargo, por motivos de seguridad institucional, su activación en el sistema de control de acceso tiene una vigencia de <strong>6 meses (costo de reactivación: $10.000)</strong>.<br>• En caso de pérdida o extravío, el costo de reposición es de <strong>$31.000</strong>.</p></div>';
+                $html .= '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;"><tr><td align="center"><a href="http://tic.scv.edu.co/verificacion" target="_blank" style="display: inline-block; background-color: #0056b3; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">Consultar Estado del Carnet</a></td></tr></table>';
+                $html .= '</td></tr>';
+                $html .= '<tr><td align="center" style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">Instituto Centro de Sistemas S.A.S. - System Center<br>Departamento de Tecnologías de la Información</td></tr>';
+                $html .= '</table></td></tr></table></body></html>';
+
+                $mail->MsgHTML($html);
+                $mail->SetFrom('info@scv.edu.co', utf8_decode('System Center - Tecnologias de la información'));
+                $mail->Subject = utf8_decode($asuntoCorreo);
+                $mail->AddAddress($txtcorreo);
+                $mail->IsHTML(true);
+                $mail->smtpConnect(array("ssl" => array(
+                    "verify_peer" => false,
+                    "verify_peer_name" => false,
+                    "allow_self_signed" => true
+                )));
+                
+                $mail->Send();
+            }
             exit();
             
         } else {

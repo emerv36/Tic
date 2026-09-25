@@ -48,6 +48,18 @@
                         </div>
                     </section>
                 </div>
+
+                <div class="box-body">
+                    <section>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn btn-block btn-success text-left" style="background-color: #00a65a; border-color: #008d4c;" onclick="cambioVista('#opciones', '#ModalReporteAcuses', '#FormReporteAcuses'); cargarTablaAcuses();">
+                                    <i class="fa fa-envelope-o"></i> <b>Historial de Envíos de Correos y Acuses de Recibo</b> (Conf. Expresa / Silencio Positivo)
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
     </div>
@@ -208,6 +220,62 @@
                                 <button type="button" class="btn btn-danger" onclick="cambioVista('#ModalReporteTipo', '#opciones', '#FormReporteTipo');">Regresar</button>
                                 <button type="button" class="btn btn-success" onclick="reporteTipo()">Reporte</button>
                             </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="ModalReporteAcuses" style="display:none">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="box-header bg-default">
+                            <h2 class="box-title">
+                                <b>Historial de Envíos y Trazabilidad de Acuses de Recibo</b>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+                <form id="FormReporteAcuses">
+                    <div class="modal-body">
+                        <div class="row" style="margin-bottom: 15px;">
+                            <div class="col-md-3">
+                                <label>Filtrar por Estado:</label>
+                                <select id="filtro_estado_acuse" class="form-control" onchange="cargarTablaAcuses();">
+                                    <option value="">TODOS</option>
+                                    <option value="PENDIENTE">PENDIENTE</option>
+                                    <option value="CONFIRMADO_EXPRESO">CONFIRMADO EXPRESO (Clic)</option>
+                                    <option value="CONFIRMADO_TACITO">CONFIRMADO TÁCITO (Silencio Positivo)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" style="top: 25px;">
+                                <button type="button" class="btn btn-default" onclick="cargarTablaAcuses();"><i class="fa fa-refresh"></i> Actualizar</button>
+                                <button type="button" class="btn btn-danger" onclick="cambioVista('#ModalReporteAcuses', '#opciones', '#FormReporteAcuses');">Regresar</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="tabla_acuses_recibo" class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr class="bg-primary">
+                                        <th>ID</th>
+                                        <th>Destinatario</th>
+                                        <th>Asunto</th>
+                                        <th>Fecha Envío</th>
+                                        <th>Estado Acuse</th>
+                                        <th>Fecha Confirmación</th>
+                                        <th>Detalles / IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_acuses_recibo">
+                                    <tr>
+                                        <td colspan="7" class="text-center">Cargando trazabilidad de correos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </form>
