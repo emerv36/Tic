@@ -414,16 +414,52 @@ switch ($case) {
         }
     break;
 
+    case 'ListarAcuses':
+        if (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json; charset=utf-8');
+        $dbPass = (defined('pass') && pass !== '') ? pass : (getenv('TIC_DB_PASS') ?: 'B.quilla54');
+        try {
+            $pdo = new PDO(connstring, user, $dbPass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            ]);
+
+            $estado = $_GET['estado'] ?? '';
+            $sql = "SELECT id, estudiante_id, destinatario_email, asunto, tipo_notificacion, fecha_envio, estado_envio, estado_acuse, intentos_recordatorio, fecha_ultimo_recordatorio, fecha_confirmacion, ip_confirmacion, user_agent FROM log_correos_acuses";
+            $params = [];
+
+            if (!empty($estado)) {
+                $sql .= " WHERE estado_acuse = :estado";
+                $params[':estado'] = $estado;
+            }
+
+            $sql .= " ORDER BY id DESC LIMIT 200";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $registros = $stmt->fetchAll();
+
+            echo json_encode([
+                'status' => 'success',
+                'data' => $registros
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        exit;
+    break;
+
     case 'AcuseRecibo':
         header("Content-Type: text/html; charset=utf-8");
         header("Cache-Control: no-cache, must-revalidate");
 
-        $token = isset($_GET['token']) ? trim($_GET['token']) : '';
+        $rawToken = $_GET['token'] ?? '';
+        $token = is_string($rawToken) ? trim($rawToken) : '';
         $mensaje = '';
         $tipoMensaje = 'info';
         $detalles = null;
 
-        if (!empty($token)) {
+        if (!empty($token) && preg_match('/^[a-f0-9]{64}$/i', $token)) {
             $dbPass = (defined('pass') && pass !== '') ? pass : (getenv('TIC_DB_PASS') ?: 'B.quilla54');
             try {
                 $pdo = new PDO(connstring, user, $dbPass, [
@@ -450,7 +486,7 @@ switch ($case) {
                                 fecha_confirmacion = :fecha,
                                 ip_confirmacion = :ip,
                                 user_agent = :ua
-                            WHERE token_acuse = :token");
+                            WHERE token_acuse = :token AND estado_acuse = 'PENDIENTE'");
                         $update->execute([
                             ':fecha' => $fechaAhora,
                             ':ip' => $ip,
@@ -458,10 +494,15 @@ switch ($case) {
                             ':token' => $token
                         ]);
 
-                        $registro['estado_acuse'] = 'CONFIRMADO_EXPRESO';
-                        $registro['fecha_confirmacion'] = $fechaAhora;
-                        $tipoMensaje = 'success';
-                        $mensaje = '¡Muchas gracias! Tu acuse de recibo ha sido registrado exitosamente en nuestro sistema.';
+                        if ($update->rowCount() > 0) {
+                            $registro['estado_acuse'] = 'CONFIRMADO_EXPRESO';
+                            $registro['fecha_confirmacion'] = $fechaAhora;
+                            $tipoMensaje = 'success';
+                            $mensaje = '¡Muchas gracias! Tu acuse de recibo ha sido registrado exitosamente en nuestro sistema.';
+                        } else {
+                            $tipoMensaje = 'warning';
+                            $mensaje = 'Este acuse de recibo ya fue registrado previamente.';
+                        }
                         $detalles = $registro;
                     }
                 } else {
@@ -469,12 +510,13 @@ switch ($case) {
                     $mensaje = 'El código de confirmación no es válido o la notificación ha expirado.';
                 }
             } catch (Exception $e) {
+                error_log("Error en AcuseRecibo: " . $e->getMessage());
                 $tipoMensaje = 'error';
                 $mensaje = 'Ocurrió un inconveniente al procesar la confirmación. Por favor intente más tarde.';
             }
         } else {
             $tipoMensaje = 'error';
-            $mensaje = 'Enlace de confirmación incompleto.';
+            $mensaje = 'Enlace de confirmación incompleto o formato de token no válido.';
         }
 
         echo '<!DOCTYPE html>

@@ -1,7 +1,7 @@
 <?php
 // developer/Controller/acusesController.php
 
-require_once('../Config/PDOconn.php');
+require_once(__DIR__ . '/../Config/PDOconn.php');
 
 header('Content-Type: application/json; charset=utf-8');
 

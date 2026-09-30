@@ -16,23 +16,37 @@ class MailAcuseService {
      * Genera un token único y registra el envío de correo.
      */
     public function registrarEnvioCorreo($destinatarioEmail, $asunto, $estudianteId = null, $tipoNotificacion = 'CARNETIZACION') {
-        $token = bin2hex(random_bytes(32));
-        $stmt = $this->pdo->prepare("INSERT INTO log_correos_acuses 
-            (estudiante_id, destinatario_email, asunto, token_acuse, tipo_notificacion, fecha_envio, estado_envio, estado_acuse)
-            VALUES (:estudiante_id, :email, :asunto, :token, :tipo, NOW(), 'ENVIADO', 'PENDIENTE')");
-        $stmt->execute([
-            ':estudiante_id' => $estudianteId,
-            ':email' => $destinatarioEmail,
-            ':asunto' => $asunto,
-            ':token' => $token,
-            ':tipo' => $tipoNotificacion
-        ]);
+        try {
+            $token = bin2hex(random_bytes(32));
+            $stmt = $this->pdo->prepare("INSERT INTO log_correos_acuses 
+                (estudiante_id, destinatario_email, asunto, token_acuse, tipo_notificacion, fecha_envio, estado_envio, estado_acuse)
+                VALUES (:estudiante_id, :email, :asunto, :token, :tipo, NOW(), 'ENVIADO', 'PENDIENTE')");
+            $stmt->execute([
+                ':estudiante_id' => $estudianteId,
+                ':email' => $destinatarioEmail,
+                ':asunto' => $asunto,
+                ':token' => $token,
+                ':tipo' => $tipoNotificacion
+            ]);
 
-        return [
-            'id' => $this->pdo->lastInsertId(),
-            'token' => $token,
-            'url_acuse' => $this->obtenerBaseUrl() . "/Cosas/Utiles/AcuseRecibo?token=" . $token
-        ];
+            $query = http_build_query([
+                'case' => 'AcuseRecibo',
+                'token' => $token
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            return [
+                'id' => $this->pdo->lastInsertId(),
+                'token' => $token,
+                'url_acuse' => $this->obtenerBaseUrl() . "/developer/Controller/reportecarnetizacionControler.php?" . $query
+            ];
+        } catch (Exception $e) {
+            error_log("MailAcuseService Error en registrarEnvioCorreo: " . $e->getMessage());
+            return [
+                'id' => null,
+                'token' => null,
+                'url_acuse' => $this->obtenerBaseUrl() . "/developer/Controller/reportecarnetizacionControler.php?case=AcuseRecibo"
+            ];
+        }
     }
 
     /**
@@ -54,13 +68,26 @@ class MailAcuseService {
     }
 
     private function obtenerBaseUrl() {
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $envBase = getenv('TIC_PUBLIC_BASE_URL');
+        if (!empty($envBase)) {
+            return rtrim($envBase, '/');
+        }
+
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $protocol = "https://";
+        }
+        
+        $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'tic.scv.edu.co';
         
         $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
         $baseDir = explode('/developer', $scriptDir)[0];
         $baseDir = rtrim($baseDir, '/');
 
-        return $protocol . $host . ($baseDir !== '' ? $baseDir : '');
+        if ($baseDir !== '' && $baseDir[0] !== '/') {
+            $baseDir = '/' . $baseDir;
+        }
+
+        return $protocol . $host . $baseDir;
     }
 }
