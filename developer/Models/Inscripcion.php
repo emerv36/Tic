@@ -42,8 +42,8 @@ class Inscripcion extends db {
                                         usuario_registra_inscripcion,
                                         password_estudiante,
                                         chip_carnet,
-                                        id_usuario_carnetfk,
-                                        lugar_reclamo)
+                                        id_usuario_carnetfk,                                         lugar_reclamo,
+                                         fecha_inscripcion)
                     VALUES(:identificacion,
                            :tipo_identificacionfk,
                            :nombre_estudiante,
@@ -64,7 +64,8 @@ class Inscripcion extends db {
                           :password_estudiante,
                           :chip_carnet,
                           :usuario,
-                          :lugar_reclamo)";
+                          :lugar_reclamo,
+                          NOW())";
 
              $params=array(':identificacion'=>$txtRegistroIdentificacion,
                            ':tipo_identificacionfk'=>$txtRegistroTipoIdentificacion,
@@ -854,8 +855,8 @@ return $respuesta;
     }
 
 public function EntregaCarnet($txtidinscripcion){
-  $sql="UPDATE inscripcion SET estado_inscripcion=:estado,fecha_inscripcion=:fecha_inscripcion WHERE id_inscripcion=:id";
-  $parametros =array(':id'=>$txtidinscripcion, ':estado'=>'3', ':fecha_inscripcion'=> $this->datetimeNow());
+  $sql="UPDATE inscripcion SET estado_inscripcion=:estado, fecha_recibido_carnet=NOW(), fecha_inscripcion = IF(fecha_inscripcion IS NULL OR fecha_inscripcion = '' OR fecha_inscripcion = '0000-00-00 00:00:00', NOW(), fecha_inscripcion) WHERE id_inscripcion=:id";
+  $parametros =array(':id'=>$txtidinscripcion, ':estado'=>'3');
   $respuesta =$this->query($sql, $parametros);
   return $respuesta;
   }
@@ -863,8 +864,7 @@ public function EntregaCarnet($txtidinscripcion){
 //funcion para guardar cambios en el carnet
 public function RealizarCambios($txtidinscripcion, $txtobservacion){
   $sql="UPDATE inscripcion SET estado_inscripcion = :estado,
-                               observacion_correccion=:observacion,
-                               fecha_inscripcion=NULL
+                               observacion_correccion=:observacion
                               WHERE id_inscripcion=:id";
   $parametros =array(':id'=>$txtidinscripcion,
                     ':observacion'=>$txtobservacion,
@@ -897,7 +897,7 @@ public function RealizarCambios($txtidinscripcion, $txtobservacion){
 
 //funcion para el cambio de carnet como recibido
 public function CambiarRecibido($txtid){  
-  $sql="UPDATE inscripcion SET estado_inscripcion=:estado,fecha_inscripcion=NULL WHERE id_inscripcion=:id";
+  $sql="UPDATE inscripcion SET estado_inscripcion=:estado WHERE id_inscripcion=:id";
   $parametros =array(':estado'=>'2', ':id'=>$txtid);
   $respuesta =$this->query($sql, $parametros);
 return $respuesta;
@@ -905,8 +905,8 @@ return $respuesta;
 
 //funcion para el como entregado
 public function CambiarEntregado($txtid){  
-  $sql="UPDATE inscripcion SET estado_inscripcion=:estado,fecha_inscripcion=NULL WHERE id_inscripcion=:id";
-  $parametros =array(':estado'=>'4',
+  $sql="UPDATE inscripcion SET estado_inscripcion=:estado, fecha_recibido_carnet=NOW(), fecha_inscripcion = IF(fecha_inscripcion IS NULL OR fecha_inscripcion = '' OR fecha_inscripcion = '0000-00-00 00:00:00', NOW(), fecha_inscripcion) WHERE id_inscripcion=:id";
+  $parametros =array(':estado'=>'3',
                      ':id'=>$txtid);
   $respuesta =$this->query($sql, $parametros);
 return $respuesta;

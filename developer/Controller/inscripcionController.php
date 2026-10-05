@@ -123,31 +123,72 @@ switch ($case) {
         if (isset($_POST['id_inscripcion']) && isset($_POST['rfid'])) {
             $id = (int)$_POST['id_inscripcion'];
             $rfid = trim($_POST['rfid']);
-            $query = $i->ActivarChip($id, $rfid);
-            if ($query) {
-                // PASO 1: Sincronizar PRIMERO la ficha del estudiante a SIGE (con su fecha_registro)
-                try {
-                    (new SigeWebhook())->enviarEstudiante($id, 'ACTUALIZAR');
-                } catch (Throwable $e) {
-                    error_log('SIGE Outbox Error (ActivarChip - Sync): ' . $e->getMessage());
-                }
-
-                // PASO 2: Emitir y despachar la orden de carnet físico a la API de Comandos de SIGE
+            if ($id > 0 && $rfid !== '') {
                 try {
                     $usuarioOrden = array(
                         'id' => (string)($_SESSION['IN_codigo_usuCA'] ?? '1'),
                         'nombre' => trim((string)($_SESSION['nombres'] ?? 'ADMINISTRADOR')),
                         'codigo_rol' => (int)($_SESSION['IN_codrol'] ?? 1)
                     );
-                    $sigeCarnetCompat->crearOrdenCarnet('ASIGNACION', $id, $rfid, 'NO_APLICA', $usuarioOrden, true);
-                    (new SigeOrdenDispatcher())->procesarPendientes(1);
+                    $estadoCarnetActual = $sigeCarnetCompat->obtenerEstadoCarnet($id);
+                    $carnetActual = $estadoCarnetActual['carnet'] ?? null;
+
+                    if ($carnetActual) {
+                        $json = json_encode(array(
+                            "success" => false,
+                            "mensaje" => "El estudiante ya cuenta con un carné registrado en SIGE. Para asignar un nuevo chip debe realizar una solicitud de REEMPLAZO con motivo y confirmación explícita."
+                        ));
+                    } else {
+                        // Sincronizar ficha del estudiante a SIGE antes de emitir la orden
+                        try {
+                            (new SigeWebhook())->enviarEstudiante($id, 'ACTUALIZAR');
+                        } catch (Throwable $syncEx) {
+                            error_log('SIGE Outbox Error (ActivarChip - Sync): ' . $syncEx->getMessage());
+                        }
+
+                        // Emisión atómica de la orden en sige_orden_outbox y actualización en inscripcion
+                        $orden = $sigeCarnetCompat->crearOrdenCarnet('ASIGNACION', $id, $rfid, 'NO_APLICA', $usuarioOrden, true);
+                        (new SigeOrdenDispatcher())->procesarPendientes(1);
+
+                        // Verificar inmediatamente el resultado del despacho para el UUID específico
+                        $estadoOutbox = $sigeCarnetCompat->consultarEstadoOrdenOutbox($orden['id_operacion']);
+                        $estadoFinal = $estadoOutbox['estado'] ?? 'PENDIENTE';
+
+                        if ($estadoFinal === 'ENVIADA') {
+                            $json = json_encode(array(
+                                "success" => true,
+                                "status" => $estadoFinal,
+                                "mensaje" => "Chip RFID vinculado y verificado en SIGE exitosamente.",
+                                "id_operacion" => $orden['id_operacion'],
+                                "expected_version" => $orden['expected_version']
+                            ));
+                        } elseif (in_array($estadoFinal, array('FALLIDA', 'CONFLICTO_OBSOLETO'), true)) {
+                            // Si SIGE rechazó la orden, revertir el cambio local para evitar divergencia de datos
+                            $sigeCarnetCompat->revertirChipInscripcion($id);
+                            $errorRemoto = !empty($estadoOutbox['ultimo_error']) ? $estadoOutbox['ultimo_error'] : 'Rechazada por SIGE.';
+                            $json = json_encode(array(
+                                "success" => false,
+                                "status" => $estadoFinal,
+                                "id_operacion" => $orden['id_operacion'],
+                                "mensaje" => "La orden fue rechazada por SIGE (" . $estadoFinal . "): " . $errorRemoto
+                            ));
+                        } else {
+                            $json = json_encode(array(
+                                "success" => false,
+                                "status" => $estadoFinal,
+                                "id_operacion" => $orden['id_operacion'],
+                                "mensaje" => "No se pudo verificar el resultado remoto en SIGE (Estado de orden UUID " . $orden['id_operacion'] . ": " . $estadoFinal . "). La orden permanece en cola."
+                            ));
+                        }
+                    }
+                } catch (DomainException $e) {
+                    $json = json_encode(array("success" => false, "mensaje" => "Vincular Chip: " . $e->getMessage()));
                 } catch (Throwable $e) {
                     error_log('SIGE Orden Outbox Error (ActivarChip - Orden): ' . $e->getMessage());
+                    $json = json_encode(array("success" => false, "mensaje" => "Error al generar la orden SIGE para el chip: " . $e->getMessage()));
                 }
-
-                $json = json_encode(array("success" => true, "mensaje" => "Chip RFID vinculado exitosamente."));
             } else {
-                $json = json_encode(array("success" => false, "mensaje" => "Error al vincular el Chip."));
+                $json = json_encode(array("success" => false, "mensaje" => "Datos incompletos o RFID vacío."));
             }
         } else {
             $json = json_encode(array("success" => false, "mensaje" => "Datos incompletos."));

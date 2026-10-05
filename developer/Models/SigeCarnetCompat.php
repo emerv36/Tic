@@ -153,12 +153,154 @@ class SigeCarnetCompat {
         }
     }
 
+    public function conciliarProyeccionSiAusente(PDO $pdo, $idInscripcion, $documento) {
+        $carnet = $this->bloquearProyeccionActual($pdo, $idInscripcion, $documento);
+        if ($carnet) {
+            return array('carnet' => $carnet, 'verificado' => true, 'es_nuevo' => false);
+        }
+        if (!defined('SIGE_API_KEY') || trim((string) SIGE_API_KEY) === '') {
+            return array('carnet' => null, 'verificado' => false, 'es_nuevo' => false);
+        }
+
+        try {
+            $resultado = $this->consultarEstudianteSige($documento);
+            if (!empty($resultado['encontrado']) && ($resultado['status'] ?? '') === 'ENCONTRADO' && isset($resultado['data']['carnet'])) {
+                $this->aplicarProyeccionSige($pdo, $idInscripcion, $documento, $resultado['data']);
+                $carnet = $this->bloquearProyeccionActual($pdo, $idInscripcion, $documento);
+                return array('carnet' => $carnet, 'verificado' => true, 'es_nuevo' => false);
+            } elseif (!empty($resultado['encontrado']) && ($resultado['status'] ?? '') === 'SIN_CARNET') {
+                return array('carnet' => null, 'verificado' => true, 'es_nuevo' => true);
+            } elseif (($resultado['status'] ?? '') === 'NO_ENCONTRADO') {
+                return array('carnet' => null, 'verificado' => true, 'es_nuevo' => true);
+            }
+        } catch (Throwable $e) {
+            error_log('Conciliación individual SIGE falló: ' . $e->getMessage());
+        }
+        return array('carnet' => null, 'verificado' => false, 'es_nuevo' => false);
+    }
+
+    private function consultarEstudianteSige($documento) {
+        $documento = trim((string) $documento);
+        if ($documento === '' || !defined('SIGE_CARNET_RECONCILIATION_URL') || !defined('SIGE_API_KEY')) {
+            return array('encontrado' => false, 'status' => 'NO_CONFIGURADO');
+        }
+        $payload = json_encode(array(
+            'estudiantes' => array(
+                array('numero_documento' => $documento, 'version_estado' => 0)
+            )
+        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_URL => SIGE_CARNET_RECONCILIATION_URL,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT => defined('SIGE_WEBHOOK_TIMEOUT') ? SIGE_WEBHOOK_TIMEOUT : 10,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json; charset=utf-8',
+                'Authorization: Bearer ' . SIGE_API_KEY,
+                'Accept: application/json'
+            ),
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
+        ));
+        $respuesta = curl_exec($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($respuesta === false || $http < 200 || $http >= 300) {
+            return array('encontrado' => false, 'status' => 'ERROR_HTTP', 'http_code' => $http);
+        }
+        $body = json_decode((string) $respuesta, true);
+        if (!is_array($body) || ($body['status'] ?? '') !== 'PROCESADO') {
+            return array('encontrado' => false, 'status' => 'RESPUESTA_INVALIDA');
+        }
+        if (isset($body['no_encontrados']) && is_array($body['no_encontrados']) && in_array($documento, $body['no_encontrados'], true)) {
+            return array('encontrado' => false, 'status' => 'NO_ENCONTRADO', 'es_ausente' => true);
+        }
+        if (isset($body['estudiantes']) && is_array($body['estudiantes'])) {
+            foreach ($body['estudiantes'] as $item) {
+                if (isset($item['numero_documento']) && (string)$item['numero_documento'] === $documento) {
+                    if (array_key_exists('carnet', $item) && $item['carnet'] !== null) {
+                        return array('encontrado' => true, 'status' => 'ENCONTRADO', 'data' => $item);
+                    } else {
+                        return array('encontrado' => true, 'status' => 'SIN_CARNET', 'data' => $item);
+                    }
+                }
+            }
+        }
+        return array('encontrado' => false, 'status' => 'NO_ENCONTRADO', 'es_ausente' => true);
+    }
+
+    private function aplicarProyeccionSige(PDO $pdo, $idInscripcion, $documento, array $sige) {
+        $carnet = $sige['carnet'];
+        $carnetId = filter_var($carnet['sige_carnet_id'] ?? null, FILTER_VALIDATE_INT);
+        $version = (int) ($sige['version_estado'] ?? 0);
+        $estado = strtoupper(trim((string) ($carnet['estado'] ?? '')));
+        if ($carnetId === false || !in_array($estado, array('ACTIVO', 'INACTIVO'), true) || $version < 1) {
+            return;
+        }
+
+        $desmarcar = $pdo->prepare(
+            "UPDATE sige_carnet_proyeccion SET es_actual = 0
+             WHERE numero_documento = :documento AND sige_carnet_id <> :carnet_id AND es_actual = 1"
+        );
+        $desmarcar->execute(array(':documento' => $documento, ':carnet_id' => $carnetId));
+
+        $upsert = $pdo->prepare(
+            "INSERT INTO sige_carnet_proyeccion
+             (sige_carnet_id, id_inscripcion, numero_documento, uid_rfid,
+              estado_operativo, motivo_inactivacion, requiere_reactivacion, fecha_emision, vigencia_hasta,
+              es_actual, ultimo_evento_id, version_estado, version, actualizado_en)
+             VALUES
+             (:carnet_id, :id_inscripcion, :documento, :uid,
+              :estado, :motivo, :requiere_reactivacion, :fecha_emision, :vigencia_hasta,
+              1, NULL, :version_estado, :version_legacy, NOW())
+             ON DUPLICATE KEY UPDATE
+                id_inscripcion = VALUES(id_inscripcion),
+                numero_documento = VALUES(numero_documento),
+                uid_rfid = VALUES(uid_rfid),
+                estado_operativo = VALUES(estado_operativo),
+                motivo_inactivacion = VALUES(motivo_inactivacion),
+                requiere_reactivacion = VALUES(requiere_reactivacion),
+                fecha_emision = VALUES(fecha_emision),
+                vigencia_hasta = VALUES(vigencia_hasta),
+                es_actual = 1,
+                version_estado = VALUES(version_estado),
+                version = VALUES(version_estado),
+                actualizado_en = NOW()"
+        );
+        $upsert->execute(array(
+            ':carnet_id' => $carnetId,
+            ':id_inscripcion' => $idInscripcion,
+            ':documento' => $documento,
+            ':uid' => $carnet['uid_rfid'] ?? null,
+            ':estado' => $estado,
+            ':motivo' => strtoupper(trim((string) ($carnet['motivo'] ?? 'NO_APLICA'))),
+            ':requiere_reactivacion' => !empty($sige['requiere_reactivacion']) ? 1 : 0,
+            ':fecha_emision' => $this->fechaOpcional($carnet['fecha_emision'] ?? null),
+            ':vigencia_hasta' => $this->fechaOpcional($carnet['vigencia_hasta'] ?? null),
+            ':version_estado' => $version,
+            ':version_legacy' => $version
+        ));
+    }
+
     public function obtenerEstadoCarnet($idInscripcion) {
         $idInscripcion = filter_var($idInscripcion, FILTER_VALIDATE_INT);
         if ($idInscripcion === false || $idInscripcion < 1) {
             throw new DomainException('Inscripción inválida.');
         }
         $pdo = $this->conexion();
+
+        $stmtDoc = $pdo->prepare("SELECT identificacion FROM inscripcion WHERE id_inscripcion = :id LIMIT 1");
+        $stmtDoc->execute(array(':id' => $idInscripcion));
+        $doc = $stmtDoc->fetchColumn();
+        if ($doc) {
+            $this->conciliarProyeccionSiAusente($pdo, $idInscripcion, $doc);
+        }
+
         $stmt = $pdo->prepare(
             "SELECT * FROM sige_carnet_proyeccion
              WHERE id_inscripcion = :id AND es_actual = 1
@@ -166,6 +308,7 @@ class SigeCarnetCompat {
         );
         $stmt->execute(array(':id' => $idInscripcion));
         $carnet = $stmt->fetch();
+
         $pendiente = $pdo->prepare(
             "SELECT id_operacion, tipo, estado, ultimo_error, creado_en
              FROM sige_orden_outbox
@@ -174,9 +317,20 @@ class SigeCarnetCompat {
         );
         $pendiente->execute(array(':id' => $idInscripcion));
         $orden = $pendiente->fetch();
+
+        $rechazada = $pdo->prepare(
+            "SELECT id_operacion, tipo, estado, ultimo_error, creado_en, actualizado_en
+             FROM sige_orden_outbox
+             WHERE id_inscripcion = :id AND estado IN ('FALLIDA','CONFLICTO_OBSOLETO')
+             ORDER BY id DESC LIMIT 1"
+        );
+        $rechazada->execute(array(':id' => $idInscripcion));
+        $ordenRechazada = $rechazada->fetch();
+
         return array(
             'carnet' => $carnet ?: null,
-            'orden_pendiente' => $orden ?: null
+            'orden_pendiente' => $orden ?: null,
+            'orden_rechazada' => $ordenRechazada ?: null
         );
     }
 
@@ -203,13 +357,24 @@ class SigeCarnetCompat {
                 throw new DomainException('Faltan metadatos del usuario responsable.');
             }
             $stmt = $pdo->prepare(
-                "SELECT id_inscripcion, identificacion FROM inscripcion WHERE id_inscripcion = :id FOR UPDATE"
+                "SELECT id_inscripcion, identificacion, fecha_inscripcion, fecha_entrega_carnet FROM inscripcion WHERE id_inscripcion = :id FOR UPDATE"
             );
             $stmt->execute(array(':id' => $idInscripcion));
             $estudiante = $stmt->fetch();
             if (!$estudiante) throw new DomainException('Inscripción no encontrada.');
 
-            $carnet = $this->bloquearProyeccionActual($pdo, (int) $idInscripcion, $estudiante['identificacion']);
+            $resConcil = $this->conciliarProyeccionSiAusente($pdo, (int) $idInscripcion, $estudiante['identificacion']);
+            $carnet = $resConcil['carnet'];
+            $verificado = !empty($resConcil['verificado']);
+            $esNuevo = !empty($resConcil['es_nuevo']);
+
+            if (!$carnet && !$esNuevo) {
+                if (!defined('SIGE_API_KEY') || trim((string) SIGE_API_KEY) === '') {
+                    throw new DomainException('Integración SIGE no configurada. No es posible determinar la versión del carné sin conexión.');
+                }
+                throw new DomainException('No fue posible verificar si el estudiante posee un carné previo en SIGE. Intente nuevamente.');
+            }
+
             $uidRfid = trim((string) $uidRfid);
             $motivo = strtoupper(trim((string) $motivo));
             if (in_array($tipo, array('ASIGNACION', 'REEMPLAZO'), true) && $uidRfid === '') {
@@ -247,7 +412,13 @@ class SigeCarnetCompat {
             if (in_array($tipo, array('BLOQUEO', 'REACTIVACION_AUTORIZADA'), true)) {
                 $uidRfid = '';
             }
-            $expectedVersion = $carnet ? (int) $carnet['version_estado'] : 0;
+            if ($carnet) {
+                $expectedVersion = (int) $carnet['version_estado'];
+            } elseif ($esNuevo) {
+                $expectedVersion = 0;
+            } else {
+                throw new DomainException('No es posible determinar la versión autoritativa del carné en SIGE.');
+            }
             $pendiente = $pdo->prepare(
                 "SELECT id_operacion FROM sige_orden_outbox
                  WHERE id_inscripcion = :id AND tipo = :tipo
@@ -263,6 +434,10 @@ class SigeCarnetCompat {
 
             $idOperacion = $this->uuidV4();
             $ahora = date('Y-m-d H:i:s');
+            $fechaValidaStr = $this->normalizarFecha(!empty($estudiante['fecha_entrega_carnet']) ? $estudiante['fecha_entrega_carnet'] : ($estudiante['fecha_inscripcion'] ?? null));
+            $fechaDateOnly = substr($fechaValidaStr, 0, 10);
+            $fechaIso = date('Y-m-d\TH:i:sP', strtotime($fechaValidaStr));
+
             $payloadArray = array(
                 'id_operacion' => $idOperacion,
                 'tipo' => $tipo,
@@ -271,6 +446,14 @@ class SigeCarnetCompat {
                 'motivo' => $motivo === '' ? null : $motivo,
                 'expected_version' => $expectedVersion,
                 'ocurrido_en' => $ahora,
+                'fecha_emision' => $fechaValidaStr,
+                'fecha_entrega' => $fechaValidaStr,
+                'fecha_registro' => $fechaValidaStr,
+                'fecha_inscripcion' => $fechaValidaStr,
+                'fecha_entrega_valida' => $fechaValidaStr,
+                'fecha_entrega_corte' => $fechaDateOnly,
+                'fecha_registro_corte' => $fechaDateOnly,
+                'fecha_entrega_iso' => $fechaIso,
                 'usuario' => array('id' => $usuarioId, 'nombre' => $usuarioNombre, 'rol' => $rol)
             );
             $payload = json_encode($payloadArray, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -300,11 +483,29 @@ class SigeCarnetCompat {
                 ':creado_en' => $ahora,
                 ':actualizado_en' => $ahora
             ));
-            if (in_array($tipo, array('ASIGNACION', 'REEMPLAZO'), true) && $uidRfid !== '' && $idInscripcion !== null) {
-                $updInsc = $pdo->prepare("UPDATE inscripcion SET chip_carnet = 'SI', uid_rfid = :uid WHERE id_inscripcion = :id");
+            if (in_array($tipo, array('ASIGNACION', 'REEMPLAZO'), true) && $idInscripcion !== null) {
+                $updInsc = $pdo->prepare(
+                    "UPDATE inscripcion 
+                     SET chip_carnet = 'SI', 
+                         uid_rfid = :uid,
+                         fecha_entrega_carnet = COALESCE(
+                             NULLIF(fecha_entrega_carnet, '0000-00-00 00:00:00'),
+                             NULLIF(fecha_inscripcion, '0000-00-00 00:00:00'),
+                             NOW()
+                         )
+                     WHERE id_inscripcion = :id"
+                );
                 $updInsc->execute(array(':uid' => $uidRfid, ':id' => $idInscripcion));
             }
             $pdo->commit();
+
+            try {
+                require_once(__DIR__ . '/../Services/SigeWebhook.php');
+                (new SigeWebhook())->enviarEstudiante((int)$idInscripcion, 'ACTUALIZAR');
+            } catch (Throwable $wEx) {
+                error_log('Error enviando webhook estudiante tras orden: ' . $wEx->getMessage());
+            }
+
             return array('id_operacion' => $idOperacion, 'duplicado' => false, 'expected_version' => $expectedVersion);
         } catch (Throwable $ex) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -313,6 +514,7 @@ class SigeCarnetCompat {
     }
 
     private function bloquearProyeccionActual(PDO $pdo, $idInscripcion, $documento) {
+        $documentoClean = trim((string) $documento);
         if ($idInscripcion !== null) {
             $stmt = $pdo->prepare(
                 "SELECT * FROM sige_carnet_proyeccion
@@ -320,16 +522,50 @@ class SigeCarnetCompat {
                  ORDER BY version_estado DESC, id DESC LIMIT 1 FOR UPDATE"
             );
             $stmt->execute(array(':id' => $idInscripcion));
+            $fila = $stmt->fetch();
+            if ($fila) {
+                return $fila;
+            }
+
+            // Hallazgo 2 fix: If not found by idInscripcion, check if a projection exists by document.
+            // Strict identity validation: document must match inscription document strictly.
+            if ($documentoClean !== '') {
+                $chkDoc = $pdo->prepare(
+                    "SELECT id_inscripcion FROM inscripcion
+                     WHERE id_inscripcion = :id AND identificacion = :doc LIMIT 1"
+                );
+                $chkDoc->execute(array(':id' => $idInscripcion, ':doc' => $documentoClean));
+                if ($chkDoc->fetchColumn() !== false) {
+                    $stmtDoc = $pdo->prepare(
+                        "SELECT * FROM sige_carnet_proyeccion
+                         WHERE numero_documento = :doc AND es_actual = 1
+                         ORDER BY version_estado DESC, id DESC LIMIT 1 FOR UPDATE"
+                    );
+                    $stmtDoc->execute(array(':doc' => $documentoClean));
+                    $filaDoc = $stmtDoc->fetch();
+                    if ($filaDoc) {
+                        if ($filaDoc['id_inscripcion'] === null || (int)$filaDoc['id_inscripcion'] === (int)$idInscripcion) {
+                            if ($filaDoc['id_inscripcion'] === null) {
+                                $updLink = $pdo->prepare("UPDATE sige_carnet_proyeccion SET id_inscripcion = :id WHERE id = :pid");
+                                $updLink->execute(array(':id' => $idInscripcion, ':pid' => $filaDoc['id']));
+                                $filaDoc['id_inscripcion'] = $idInscripcion;
+                            }
+                            return $filaDoc;
+                        }
+                    }
+                }
+            }
+            return null;
         } else {
             $stmt = $pdo->prepare(
                 "SELECT * FROM sige_carnet_proyeccion
                  WHERE numero_documento = :documento AND es_actual = 1
                  ORDER BY version_estado DESC, id DESC LIMIT 1 FOR UPDATE"
             );
-            $stmt->execute(array(':documento' => $documento));
+            $stmt->execute(array(':documento' => $documentoClean));
+            $fila = $stmt->fetch();
+            return $fila ?: null;
         }
-        $fila = $stmt->fetch();
-        return $fila ?: null;
     }
 
     private function marcarEvento(PDO $pdo, $idEvento, $nota) {
@@ -427,8 +663,36 @@ class SigeCarnetCompat {
         return $valor;
     }
 
+    private function normalizarFecha($valor) {
+        $v = trim((string) $valor);
+        if ($v === '' || $v === '0000-00-00 00:00:00' || $v === '0000-00-00') return date('Y-m-d H:i:s');
+        try {
+            $dt = new DateTimeImmutable($v);
+            return $dt->format('Y-m-d H:i:s');
+        } catch (Throwable $e) {
+            return date('Y-m-d H:i:s');
+        }
+    }
+
     private function esUuid($valor) {
         return is_string($valor) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $valor) === 1;
+    }
+
+    public function consultarEstadoOrdenOutbox($idOperacion) {
+        $pdo = $this->conexion();
+        $stmt = $pdo->prepare(
+            "SELECT id_operacion, tipo, estado, ultimo_http_code, ultimo_error, creado_en, actualizado_en
+             FROM sige_orden_outbox WHERE id_operacion = :op LIMIT 1"
+        );
+        $stmt->execute(array(':op' => strtolower(trim((string)$idOperacion))));
+        $res = $stmt->fetch();
+        return $res ?: null;
+    }
+
+    public function revertirChipInscripcion($idInscripcion) {
+        $pdo = $this->conexion();
+        $stmt = $pdo->prepare("UPDATE inscripcion SET chip_carnet = 'NO', uid_rfid = NULL WHERE id_inscripcion = :id");
+        $stmt->execute(array(':id' => (int)$idInscripcion));
     }
 
     private function uuidV4() {

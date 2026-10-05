@@ -82,16 +82,26 @@ class SigeOrdenDispatcher {
             return;
         }
 
+        $maxIntentos = defined('SIGE_OUTBOX_MAX_ATTEMPTS') ? (int) SIGE_OUTBOX_MAX_ATTEMPTS : 12;
+        $superoMaxIntentos = (int) $orden['intentos'] >= $maxIntentos;
+
         $codigo = $ack['codigo'];
         $terminal = in_array($http, array(400, 404, 409, 422), true)
-            || ($http >= 200 && $http < 300 && $ack['status'] === 'RECHAZADO');
+            || ($http >= 200 && $http < 300 && $ack['status'] === 'RECHAZADO')
+            || $superoMaxIntentos;
+
         $estado = $terminal ? 'FALLIDA' : 'REINTENTO';
-        if ($codigo === 'CONFLICTO_OBSOLETO') {
+        if ($codigo === 'CONFLICTO_OBSOLETO' || ($http === 409 && ($codigo === '' || $codigo === 'CONFLICTO_OBSOLETO'))) {
             $estado = 'CONFLICTO_OBSOLETO';
+        } elseif ($http === 409 || in_array($codigo, array('ID_OPERACION_CONFLICTIVO', 'CONFLICTO_ESTADO'), true)) {
+            $estado = 'FALLIDA';
         }
         $minutos = $this->minutosReintento((int) $orden['intentos']);
         $proximo = date('Y-m-d H:i:s', time() + ($minutos * 60));
         $error = $ack['mensaje'] !== '' ? $ack['mensaje'] : (string) $resultado['respuesta'];
+        if ($superoMaxIntentos && $error === '') {
+            $error = 'Número máximo de reintentos superado.';
+        }
         $error = substr($error, 0, 2000);
         $stmt = $pdo->prepare(
             "UPDATE sige_orden_outbox
@@ -106,6 +116,15 @@ class SigeOrdenDispatcher {
         $stmt->bindValue(':proximo', $proximo);
         $stmt->bindValue(':id', $orden['id'], PDO::PARAM_INT);
         $stmt->execute();
+
+        if (in_array($estado, array('FALLIDA', 'CONFLICTO_OBSOLETO'), true) && !empty($orden['id_inscripcion'])) {
+            try {
+                require_once(__DIR__ . '/../Models/SigeCarnetCompat.php');
+                (new SigeCarnetCompat())->revertirChipInscripcion((int)$orden['id_inscripcion']);
+            } catch (Throwable $revEx) {
+                error_log('Error al revertir chip tras rechazo de SIGE: ' . $revEx->getMessage());
+            }
+        }
     }
 
     private function validarAck($respuesta, $idOperacion) {

@@ -130,7 +130,7 @@ assertTrueContract(!array_key_exists('estado_academico', $payloadSinQ10), 'Sin Q
 
 $estudiante['estado_inscripcion'] = 2;
 $payloadNoEntregado = invokePrivateContract($webhook, 'construirPayload', array($estudiante, 'ACTIVO'));
-assertTrueContract(!array_key_exists('fecha_registro', $payloadNoEntregado), 'La fecha TIC solo viaja al entregar.');
+assertTrueContract(!empty($payloadNoEntregado['fecha_registro']), 'La fecha de registro viaja para prevenir HTTP 422 en SIGE.');
 
 // Caracteriza ACK estricto del dispatcher estudiantil vigente.
 $dispatcherReflection = new ReflectionClass(SigeOrdenDispatcher::class);

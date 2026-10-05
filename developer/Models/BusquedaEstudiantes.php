@@ -57,6 +57,7 @@ $query = $db->prepare("SELECT id_inscripcion,
                               fecha_inscripcion,
                               usuario_registra_inscripcion,
                               fecha_entrega_carnet,
+                              fecha_recibido_carnet,
                               observacion_correccion,
                               codigo_foto,
                               indicador_foto,
@@ -68,178 +69,160 @@ $query = $db->prepare("SELECT id_inscripcion,
                               id_usuario_carnetfk
                               FROM inscripcion i
                                      LEFT JOIN tipo_identidad t  		          	ON i.tipo_identificacionfk=t.id_tipo
-                                     LEFT JOIN sede           s  		          	ON i.id_sede_inscripcionfk=s.id_sede
-                                     LEFT JOIN programa       p  		          	ON i.id_programa_inscripcionfk=p.id_programa
-                                     LEFT JOIN lotecarnet     l  		          	ON i.id_lote_inscripcionfk=l.id_lote
-                                     LEFT JOIN obscarnet     ob 		          	ON i.obscarnetfk=ob.id_obs
-           
-                    WHERE (nombre_estudiante LIKE :valor OR apellido_estudiante LIKE :valor OR CONCAT(apellido_estudiante,' ',nombre_estudiante) LIKE :valor OR CONCAT(nombre_estudiante,' ',apellido_estudiante) LIKE :valor OR identificacion LIKE :valor OR celular_estudiante LIKE :valor) ORDER BY id_inscripcion DESC limit 15");
-$query->bindValue(':valor', '%' . $valor . '%', PDO::PARAM_STR);
-$query->execute();
-$estudiantes_res = $query->fetchAll(PDO::FETCH_ASSOC);
-////consulta de estudiantes matriculados en un programa ////
+                                     LEFT JOIN programa p 		          	        ON i.id_programa_inscripcionfk=p.id_programa
+                                     LEFT JOIN sede s    		          	        ON i.id_sede_inscripcionfk=s.id_sede
+                                     LEFT JOIN lotecarnet l    		       	ON i.id_lote_inscripcionfk=l.id_lote
+                              WHERE (identificacion LIKE :b  OR nombre_estudiante LIKE :b OR apellido_estudiante LIKE :b  OR email_estudiante LIKE :b OR CONCAT(nombre_estudiante,' ',apellido_estudiante) LIKE :b) 
+                             
+                              LIMIT 1");
+
+$query->execute(array(':b' => '%' . $valor . '%'));
+$row_count = $query->rowCount();
+
+if ($row_count == 0) {
+    echo '<div style="top:150px" class="col-md-12 text-center alert alert-danger">No se encontraron resultados con ese criterio de busqueda</div>';
+    exit;
+} else {
+
+    while ($row = $query->fetch()) {
+        $identificacion = resaltar($row['identificacion'], $valor);
+        $nombre_estudiante = resaltar(strtoupper($row['nombre_estudiante']), $valor);
+        $apellido_estudiante = resaltar(strtoupper($row['apellido_estudiante']), $valor);
+        $celular_estudiante = resaltar($row['celular_estudiante'], $valor);
+        $email_estudiante = resaltar($row['email_estudiante'], $valor);
+        $tipo_sangre = resaltar(strtoupper($row['tipo_sangre']), $valor);
+
+        $valor_registro = $row['valor_registro'];
+        if ($valor_registro == 1) {
+            $valor_registro = '<span title="Sede" class="label label label-warning">' . $row['estado_inscripcion'] . '</span>';
+        } else if ($valor_registro == 2) {
+            $valor_registro = '<span title="Sede" class="label label label-info">' . $row['estado_inscripcion'] . '</span>';
+        } else if ($valor_registro == 3) {
+            $valor_registro = '<span title="Sede" class="label label label-success">' . $row['estado_inscripcion'] . '</span>';
+        } else if ($valor_registro == 4) {
+            $valor_registro = '<span title="Sede" class="label label label-danger">' . $row['estado_inscripcion'] . '</span>';
+        }
+
+        // Acciones de botones
+        $recibido = '';
+        if ($row['valor_registro'] == 1) {
+            $recibido = '<button class="btn btn-success" title="Confirmar como realizado"  onclick="modalcambiarrecibido(' . $row['id_inscripcion'] . ',' . "'" . strtoupper($row['nombre_estudiante']) . "'" . ',' . "'" . strtoupper($row['apellido_estudiante']) . "'" . ')"><i class="fa fa-check-circle"></i> Confirmar Realizado</button>';
+        } else {
+            $recibido = '<button  disabled class="btn btn-success" title="Confirmar como realizado"  onclick="modalcambiarrecibido(' . $row['id_inscripcion'] . ',' . "'" . strtoupper($row['nombre_estudiante']) . "'" . ',' . "'" . strtoupper($row['apellido_estudiante']) . "'" . ')"><i class="fa fa-check-circle"></i> Confirmar Realizado</button>';
+        }
+
+        $editar = '';
+        if ($row['valor_registro'] == 1 || $row['valor_registro'] == 2 || $row['valor_registro'] == 4) {
+            $editar = '<button class="btn btn-primary" title="Editar informacio de estudiante"  onclick="modaleditarinscripcion(' . $row['id_inscripcion'] . ')"> Editar Registro <i class="fa fa-edit"></i></button>';
+        } else {
+            $editar = '<button disabled class="btn btn-primary" title="Editar informacio de estudiante"  onclick="modaleditarinscripcion(' . $row['id_inscripcion'] . ')"> Editar Registro <i class="fa fa-edit"></i></button>';
+        }
+
+        $entrega = '';
+        if ($row['valor_registro'] == 2) {
+            $entrega = '<button class="btn btn-primary" title="Entrega carnet"  onclick="ModalEntregaCarnet(' . $row['id_inscripcion'] . ')"> Entregar carnet <i class="fa fa-handshake-o"></i></button>';
+        } else {
+            $entrega = '<button disabled class="btn btn-primary" title="Entrega carnet"  onclick="ModalEntregaCarnet(' . $row['id_inscripcion'] . ')"> Entregar carnet <i class="fa fa-handshake-o"></i></button>';
+        }
+
+        $lote = '';
+        if ($row['valor_registro'] == 1) {
+            $lote = '<button class="btn btn-primary" title="Cambiar Lote"  onclick="modalcambiarLote(' . $row['id_inscripcion'] . ')"> Cambiar de Lote <i class="fa fa-vcard-o"></i></button>';
+        } else {
+            $lote = '<button disabled class="btn btn-primary" title="Cambiar Lote"  onclick="modalcambiarLote(' . $row['id_inscripcion'] . ')"> Cambiar de Lote <i class="fa fa-vcard-o"></i></button>';
+        }
+
+        $cambios = '';
+        if ($row['valor_registro'] == 1 || $row['valor_registro'] == 2) {
+            $cambios = '<button class="btn btn-primary" title="Editar informacio de estudiante"  onclick="modalrealizarcambios(' . $row['id_inscripcion'] . ')"> Realizar cambio <i class="fa fa-wrench"></i></button>';
+        } else {
+            $cambios = '<button disabled class="btn btn-primary" title="Editar informacio de estudiante"  onclick="modalrealizarcambios(' . $row['id_inscripcion'] . ')"> Realizar cambio <i class="fa fa-wrench"></i></button>';
+        }
+
+        $programa = '';
+        if ($row['valor_registro'] == 1) {
+            $programa = '<button class="btn btn-primary" title="Editar programa"  onclick="modalcambiarprograma(' . $row['id_inscripcion'] . ')"> Cambiar programa <i class="fa fa-briefcase"></i></button>';
+        } else {
+            $programa = '<button disabled class="btn btn-primary" title="Editar programa"  onclick="modalcambiarprograma(' . $row['id_inscripcion'] . ')"> Cambiar programa <i class="fa fa-briefcase"></i></button>';
+        }
+
+        $chip = '';
+        if ($row['chip_carnet'] == 'SI') {
+            $chip = '<span title="Chip Carnet" class="label label-success">SI</span>';
+        } else if ($row['chip_carnet'] == 'NO') {
+            $chip = '<span title="Chip Carnet" class="label label-danger">NO</span>';
+        }
+
 ?>
 
-<div class="row">
-    <div class="col-md-12">
-        <?php
-        $i = 1;
-        $x = 1;
-        $z = 1;
-        $editar = '';
-        if (count($estudiantes_res) > 0) { ?>
-
-            <?php foreach ($estudiantes_res as $row) { ?>
-
-                <?php
-                $entrega = '';
-                $eliminar = '';
-                $disabled = 'disabled';
-
-                if ($row['valor_registro'] == '1') {
-                    $editar = '<button  class="btn btn-primary" title="Editar Registro"  onclick="CargarEditarInscripcion(' . $row['id_inscripcion'] . ','
-                        . "'" . $row['identificacion'] . "'" . ','
-                        . "'" . $row['tipo_identificacionfk'] . "'" . ','
-                        . "'" . $row['nombre_estudiante'] . "'" . ','
-                        . "'" . $row['apellido_estudiante'] . "'" . ','
-                        . "'" . $row['email_estudiante'] . "'" . ','
-                        . "'" . $row['celular_estudiante'] . "'" . ','
-                        . "'" . $row['tipo_sangre'] . "'" . ','
-                        . $row['id_lote_inscripcionfk'] . ','
-                        . "'" . $row['indicador_foto'] . "'" . ','
-                        . "'" . $row['codigo_foto'] . "'" . ','
-                        . "'" . $row['chip_carnet'] . "'" . ','
-                        . $row['obscarnetfk'] . ')"> Editar Registro <i class="fa fa-check-square-o"></i></button>';
-                } else {
-                    $editar = '<button disabled  class="btn btn-primary" title="Editar Registro"> Editar Registro <i class="fa fa-check-square-o"></i></button>';
-                }
-
-                if ($row['valor_registro'] == '1') {
-                    $cambio = '<button   class="btn btn-primary" title="Registrar Cambio"  onclick="ModalRelizarCambios(' . $row['id_inscripcion'] . ')">Realizar cambio <i class=" 	fa fa-gavel"></i></button>';
-                    $eliminar = '<button class="btn btn-danger" title="Eliminar Registro"  onclick="modalEliminarRegistro(' . $row['id_inscripcion'] . ')">Me equivoque, Quiero Eliminar!  <i class="fa fa-trash"></i></button>';
-                    $recibido = '<button class="btn btn-success" title="Confirmar como realizado"  onclick="modalcambiarrecibido(' . $row['id_inscripcion'] . ',' . "'" . strtoupper($row['nombre_estudiante']) . "'" . ',' . "'" . strtoupper($row['apellido_estudiante']) . "'" . ')"><i class="fa fa-check-circle"></i> Confirmar Realizado</button>';
-                } else {
-                    $cambio = '<button disabled  class="btn btn-primary" title="Registrar Cambio"  onclick="ModalRelizarCambios(' . $row['id_inscripcion'] . ')">Realizar cambio <i class=" 	fa fa-gavel"></i></button>';
-                    $recibido = '<button  disabled class="btn btn-success" title="Confirmar como realizado"  onclick="modalcambiarrecibido(' . $row['id_inscripcion'] . ',' . "'" . strtoupper($row['nombre_estudiante']) . "'" . ',' . "'" . strtoupper($row['apellido_estudiante']) . "'" . ')"><i class="fa fa-check-circle"></i> Confirmar Realizado</button>';
-                }
-                if ($row['valor_registro'] == '1' || $row['valor_registro'] == '4') {
-                    $lote = '<button   class="btn btn-primary" title="Cambiar de lote"  onclick="ModalCambiarLote(' . $row['id_inscripcion'] . ',' . $row['id_lote_inscripcionfk'] . ')"> Cambiar de Lote <i class="fa fa-id-card"></i></button>';
-                } else {
-                    $lote = '<button disabled  class="btn btn-primary" title="Cambiar de lote"> Cambiar de Lote <i class="fa fa-id-card"></i></button>';
-                }
-
-                if ($row['valor_registro'] == '2') {
-                    $entrega = '<button class="btn btn-primary" title="Entrega carnet"  onclick="ModalEntregaCarnet(' . $row['id_inscripcion'] . ')"> Entregar carnet <i class="fa fa-handshake-o"></i></button>';
-                } else {
-                    $entrega = '<button disabled class="btn btn-primary" title="Entrega carnet"  onclick="ModalEntregaCarnet(' . $row['id_inscripcion'] . ')"> Entregar carnet <i class="fa fa-handshake-o"></i></button>';
-                }
-
-                if ($row['valor_registro'] == '1') {
-                    $programa = '<button class="btn btn-primary" title="Cambiar programa"  onclick="ModalCambiarPrograma(' . $row['id_inscripcion'] . ',' . "'" . $row['nombre_sede'] . "'" . ',' . "'" . $row['nombre_programa'] . "'" . ',' . "'" . $row['categoria_carnet'] . "'" . ')">Cambiar programa <i class="fa fa-briefcase"></i></button>';
-                } else {
-                    $programa = '<button disabled class="btn btn-primary" title="Cambiar programa"> Cambiar programa <i class="fa fa-briefcase"></i></button>';
-                }
-
-                //cambiar colores de estado
-
-                if ($row['valor_registro'] == '1') {
-
-                    $valor_registro = "<span class='label label-primary'>EN PROCESO</span>";
-                } else if ($row['valor_registro'] == '2') {
-                    $valor_registro = "<span class='label label-warning'>RECIBIDO</span>";
-                } else if ($row['valor_registro'] == '3') {
-                    $valor_registro = "<span class='label label-success'>ENTREGADO</span>";
-                } else if ($row['valor_registro'] == '4') {
-                    $valor_registro = "<span class='label label-danger'>CORRECCION</span>";
-                }
-
-                if ($row['chip_carnet'] == 'SI') {
-                    $valor_chip = "<span class='label label-success'>SI</span>";
-                } else {
-                    $valor_chip = "<span class='label label-danger'>NO</span>";
-                }
-
-                $idSige = (int) $row['id_inscripcion'];
-                $documentoSige = htmlspecialchars(
-                    json_encode((string) $row['identificacion'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
-                    ENT_QUOTES,
-                    'UTF-8'
-                );
-                $chip = '<button class="btn btn-info" title="Asignar / Vincular Tarjeta RFID" onclick="ModalActivarChip(' . $row['id_inscripcion'] . ',' . "'" . $row['identificacion'] . "'" . ')"><i class="fa fa-id-card-o"></i></button>';
-                
-                $btnRenovacion = '<button type="button" class="btn btn-success btn-xs" title="Renovación de vigencia (mismo carné)" onclick="abrirModalRenovacionSige(' . $idSige . ', ' . $documentoSige . ')"><i class="fa fa-refresh"></i> Renovación</button>';
-
-                $exportarPdf = '<a href="exportar_carnet.php?id='.$row['id_inscripcion'].'" target="_blank" class="btn btn-primary" title="Exportar Carnet PDF"><i class="fa fa-file-pdf-o"></i></a>';
-                $opciones = $editar . ' ' . $chip . ' ' . $btnRenovacion . ' ' . $exportarPdf . ' ' . $entrega . ' ' . $lote . ' ' . $cambio . ' ' . $programa . ' ' . $recibido . ' ' . $eliminar;
-                ?>
-
-
-                <div class="box">
-                    <ul class="nav nav-tabs">
-                        <li class="active"><a data-toggle="tab" href="#<?= $i . $row['id_inscripcion'] ?>">Información de Registro</a></li>
-                        <li><a data-toggle="tab" href="#ide<?= $i . $row['id_inscripcion'] ?>">Información Corrección Carnet</a></li>
-
-                    </ul>
-                    <div class="tab-content">
-                        <div id="<?= $i . $row['id_inscripcion'] ?>" class="tab-pane fade in active">
-                            <div class="panel panel-primary">
-                                <div class="panel-body">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="nav-tabs-custom">
+                        <ul class="nav nav-tabs">
+                            <li class="active"><a href="#tab_1" data-toggle="tab" aria-expanded="true">Información de Registro</a></li>
+                            <li class=""><a href="#tab_2" data-toggle="tab" aria-expanded="false">Información Corrección Carnet</a></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="tab_1">
+                                <div class="box-body">
 
                                     <div class="row">
 
-                                        <div class="col-md-2" style="word-break: break-all;">
-                                            <label for="Nombre">Nombre:</label><br>
-                                            <span title="tipo"><?= strtoupper(strtolower(resaltar($row['nombre_estudiante'], $valor))) ?></span>
+                                        <div class="col-md-2">
+                                            <label for="nombres">Nombre:</label><br>
+                                            <span title="Nombre del estudiante"><?= $nombre_estudiante ?></span>
                                         </div>
 
-                                        <div class="col-md-2" style="word-break: break-all;">
-                                            <label for="apellido">Apellidos:</label><br>
-                                            <span title="Apellidos"><?= strtoupper(strtolower(resaltar($row['apellido_estudiante'], $valor))) ?></span>
+                                        <div class="col-md-2">
+                                            <label for="apellidos">Apellidos:</label><br>
+                                            <span title="Apellidos del estudiante"><?= $apellido_estudiante ?></span>
                                         </div>
 
-
-                                        <div class="col-md-3" style="word-break: break-all;">
+                                        <div class="col-md-3">
                                             <label for="email">Email:</label><br>
-                                            <span title="Email"><?= strtolower($row['email_estudiante']) ?></span>
-                                        </div>
-                                        <div class="col-md-2" style="word-break: break-all;">
-                                            <label for="Identidad">No Identidad:</label><br>
-                                            <span title="Identidad"><?= resaltar('(' . $row['nombre_identidad'] . ')' . $row['identificacion'], $valor) ?></span>
+                                            <span title="Email del estudiante"><?= $email_estudiante ?></span>
                                         </div>
 
-                                        <div class="col-md-2" style="word-break: break-all;">
+                                        <div class="col-md-2">
+                                            <label for="identificacion">No Identidad:</label><br>
+                                            <span title="Identificacion"><?= '(' . $row['nombre_identidad'] . ')' . $identificacion ?></span>
+                                        </div>
+
+                                        <div class="col-md-2">
                                             <label for="celular">No Celular:</label><br>
-                                            <span title="celular"><?= resaltar($row['celular_estudiante'], $valor) ?></span>
+                                            <span title="Celular del estudiante"><?= $celular_estudiante ?></span>
                                         </div>
 
-                                        <div class="col-md-1" style="word-break: break-all;">
-                                            <label for="tipo_sangre">Rh:</label><br>
-                                            <span title="Tipo de sangre"><?= strtoupper($row['tipo_sangre']) ?></span>
+                                        <div class="col-md-1">
+                                            <label for="rh">Rh:</label><br>
+                                            <span title="Tipo de sangre"><?= $tipo_sangre ?></span>
                                         </div>
 
                                     </div>
-                                    <hr>
 
+                                    <br>
                                     <div class="row">
+
                                         <div class="col-md-2">
-                                            <label for="Sede">Sede:</label><br>
+                                            <label for="sede">Sede:</label><br>
                                             <span title="Sede"><?= strtoupper($row['nombre_sede']) ?></span>
                                         </div>
 
                                         <div class="col-md-2">
+                                            <label for="categoria">Categoría:</label><br>
+
                                             <?php if ($row['valor_categoria'] == 1) { ?>
-                                                <label for="Programa">Categoría:</label><br>
                                                 <span title="categoria" class="label label-danger"><?= strtoupper($row['categoria_carnet']) ?></span>
                                             <?php } else if ($row['valor_categoria'] == 2) { ?>
-                                                <label for="Programa">Categoría:</label><br>
-                                                <span title="categoria" class="label label-success"><?= strtoupper($row['categoria_carnet']) ?></span>
+                                                <span title="categoria" class="label label-primary"><?= strtoupper($row['categoria_carnet']) ?></span>
                                             <?php } else if ($row['valor_categoria'] == 3) { ?>
-                                                <label for="Programa">Categoría:</label><br>
                                                 <span title="categoria" class="label label-warning"><?= strtoupper($row['categoria_carnet']) ?></span>
-                                            <?php } ?>
+                                            <?php }  ?>
+
                                         </div>
 
-                                        <div class="col-md-2">
+                                        <div class="col-md-3">
                                             <?php if ($row['valor_categoria'] == 1) { ?>
                                                 <label for="categoria">Programa:</label><br>
                                                 <span title="categoria"><?= strtoupper($row['nombre_programa']) ?></span>
@@ -262,7 +245,7 @@ $estudiantes_res = $query->fetchAll(PDO::FETCH_ASSOC);
                                             <span title="Sede"><?= $valor_registro ?></span>
                                         </div>
 
-                                        <div class="col-md-2">
+                                        <div class="col-md-1">
                                             <label for="Lote">Tipo Carnet:</label><br>
                                             <span title="Sede" class="label label label-success"><?= strtoupper($row['tipo_carnet']) ?></span>
                                         </div>
@@ -272,7 +255,7 @@ $estudiantes_res = $query->fetchAll(PDO::FETCH_ASSOC);
                                         <hr>
                                         <div class="col-md-2">
                                             <label for="fecha_registro">Fecha de Registro:</label><br>
-                                            <span title="fecha"><?= $row['fecha_inscripcion'] ?></span>
+                                            <span title="fecha"><?= (!empty($row['fecha_inscripcion']) && $row['fecha_inscripcion'] != '0000-00-00 00:00:00') ? $row['fecha_inscripcion'] : ($row['fecha_recibido_carnet'] ?? '') ?></span>
                                         </div>
 
                                         <div class="col-md-2">
@@ -287,69 +270,69 @@ $estudiantes_res = $query->fetchAll(PDO::FETCH_ASSOC);
 
                                         <div class="col-md-2">
                                             <label for="creado_por">Observación Novedad:</label><br>
-                                            <span title="Observación"><?= strtoupper($row['observacion_novedad']) ?></span>
+                                            <span title="Tipo de Novedad"><?= strtoupper($row['observacion_novedad'] ?? 'NINGUNA') ?></span>
                                         </div>
 
                                         <div class="col-md-2">
                                             <label for="creado_por">Usuario Registra:</label><br>
-                                            <span title="Usuario"><?= strtoupper($row['usuario_registra_inscripcion']) ?></span>
+                                            <span title="Usuario que registra"><?= strtoupper($row['usuario_registra_inscripcion']) ?></span>
                                         </div>
 
-                                        <div class="col-md-2">
+                                        <div class="col-md-1">
                                             <label for="creado_por">¿Chip?:</label><br>
-                                            <span title="Chip"><?= $valor_chip ?></span>
+                                            <span><?= $chip ?></span>
                                         </div>
-
                                     </div>
+
+                                    <br>
                                     <div class="row">
-                                        <hr>
+
                                         <div class="col-md-12">
-                                            <?php echo $opciones; ?>
+                                            <p>
+                                                <?= $editar ?>
+                                                <button class="btn btn-info" title="Ver Fotografia de carnet" onclick="modalverfoto(<?= $row['id_inscripcion'] ?>)"><i class="fa fa-vcard-o"></i></button>
+                                                <button class="btn btn-success" title="Renovación de Carnet" onclick="modalrenovacioncarnet(<?= $row['id_inscripcion'] ?>)"><i class="fa fa-refresh"></i> Renovación </button>
+                                                <button class="btn btn-primary" title="Imprimir PDF" onclick="reportecarnetporid(<?= $row['id_inscripcion'] ?>)"><i class="fa fa-file-pdf-o"></i></button>
+                                                <?= $entrega ?>
+                                                <?= $lote ?>
+                                                <?= $cambios ?>
+                                                <?= $programa ?>
+                                            </p>
+                                            <p><?= $recibido ?></p>
                                         </div>
+
                                     </div>
 
-
                                 </div>
+
                             </div>
-                        </div>
-                        <div id="ide<?= $i . $row['id_inscripcion'] ?>" class="tab-pane fade">
-                            <div class="panel panel-primary">
-                                <div class="panel-body"> 
+                            <!-- /.tab-pane -->
+                            <div class="tab-pane" id="tab_2">
+
+                                <div class="box-body">
+
                                     <div class="row">
 
-                                        <div class="col-md-6">
-                                            <label for="creado_por">Observación corrección:</label><br>
-                                            <span title="Usuario"><?= strtoupper($row['observacion_correccion']) ?></span>
+                                        <div class="col-md-12">
+                                            <label for="nombres">Observación Novedad:</label><br>
+                                            <span title="Nombre del estudiante"><?= strtoupper($row['observacion_correccion']) ?></span>
                                         </div>
-                                        <?php 
-                                        if($row['lugar_reclamo'] != ""){
-                                        ?>
-                                        <div class="col-md-3">
-                                            <label for="creado_por">Lugar reclamo:</label><br>
-                                            <span title="Usuario"><?= strtoupper($row['lugar_reclamo']) ?></span>
-                                        </div>
-                                        <?php
-                                        }
-                                        ?>
-                                        <div class="col-md-3">
-                                            <label for="creado_por">Estado carnet:</label><br>
-                                            <span title="Usuario"><?= $valor_registro ?></span>
-                                        </div>
+
                                     </div>
+
                                 </div>
+
                             </div>
                         </div>
+
                     </div>
                 </div>
-                <tbody class="buscar">
+            </div>
+        </div>
 
-            <?php
-                $i++;
-                $z++;
-            }
-        } else {
-            echo '<div style="top:150px" class="col-md-12 text-center">¡No hay resultados!</div>';
-        }
-            ?>
-    </div>
-</div>
+<?php
+
+    }
+}
+
+?>

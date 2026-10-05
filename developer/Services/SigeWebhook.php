@@ -115,6 +115,7 @@ class SigeWebhook extends db {
                        COALESCE(i.categoria_carnet, 1) AS categoria_carnet,
                        i.estado_inscripcion,
                        i.fecha_inscripcion,
+                       i.fecha_entrega_carnet,
                        i.chip_carnet,
                        i.uid_rfid,
                        i.codigo_foto,
@@ -141,11 +142,11 @@ class SigeWebhook extends db {
 
         $payload = array(
             'tic_id_inscripcion'    => (int) $estudiante['id_inscripcion'],
-            'tipo_documento'       => strtoupper($estudiante['tipo_documento']),
+            'tipo_documento'       => $this->aMayusculas($estudiante['tipo_documento']),
             'numero_documento'     => $estudiante['identificacion'],
-            'nombres'              => strtoupper($estudiante['nombre_estudiante']),
-            'apellidos'            => strtoupper($estudiante['apellido_estudiante']),
-            'programa'             => strtoupper($estudiante['nombre_programa']),
+            'nombres'              => $this->aMayusculas($estudiante['nombre_estudiante']),
+            'apellidos'            => $this->aMayusculas($estudiante['apellido_estudiante']),
+            'programa'             => $this->aMayusculas($estudiante['nombre_programa']),
             'categoria_carnet'     => $categoriaId,
             'tipo_categoria'       => $tipoCategoria,
             'foto_url'             => $foto_url,
@@ -156,10 +157,30 @@ class SigeWebhook extends db {
         if ($estadoAcademico !== null) {
             $payload['estado_academico'] = $estadoAcademico;
         }
-        if ($this->esFechaValida($estudiante['fecha_inscripcion'])) {
-            $payload['fecha_registro'] = $estudiante['fecha_inscripcion'];
-        }
+        $fechaFull = $this->normalizarFecha(
+            !empty($estudiante['fecha_entrega_carnet']) ? $estudiante['fecha_entrega_carnet'] : null,
+            !empty($estudiante['fecha_inscripcion']) ? $estudiante['fecha_inscripcion'] : null
+        );
+        $fechaDateOnly = substr($fechaFull, 0, 10);
+        $fechaIso = date('Y-m-d\TH:i:sP', strtotime($fechaFull));
+
+        $payload['fecha_registro'] = $fechaFull;
+        $payload['fecha_entrega'] = $fechaFull;
+        $payload['fecha_inscripcion'] = $fechaFull;
+        $payload['fecha_emision'] = $fechaFull;
+
+        $payload['fecha_registro_corte'] = $fechaDateOnly;
+        $payload['fecha_entrega_corte'] = $fechaDateOnly;
+        $payload['fecha_inscripcion_corte'] = $fechaDateOnly;
+
+        $payload['fecha_registro_iso'] = $fechaIso;
+        $payload['fecha_entrega_iso'] = $fechaIso;
         return $payload;
+    }
+
+    private function aMayusculas($valor) {
+        $texto = trim((string) $valor);
+        return function_exists('mb_strtoupper') ? mb_strtoupper($texto, 'UTF-8') : strtoupper($texto);
     }
 
     private function normalizarCelular($valor) {
@@ -175,9 +196,30 @@ class SigeWebhook extends db {
     }
 
     private function esFechaValida($valor) {
-        if (!$valor || $valor === '0000-00-00 00:00:00') return false;
-        $fecha = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $valor);
-        return $fecha && $fecha->format('Y-m-d H:i:s') === $valor;
+        $v = trim((string) $valor);
+        if ($v === '' || $v === '0000-00-00 00:00:00' || $v === '0000-00-00') return false;
+        try {
+            $dt = new DateTimeImmutable($v);
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    private function normalizarFecha($valor, $fallback = null) {
+        $v = trim((string) $valor);
+        if ($v === '' || $v === '0000-00-00 00:00:00' || $v === '0000-00-00') {
+            if ($fallback !== null && $fallback !== '' && $fallback !== '0000-00-00 00:00:00' && $fallback !== '0000-00-00') {
+                return $this->normalizarFecha($fallback);
+            }
+            return date('Y-m-d H:i:s');
+        }
+        try {
+            $dt = new DateTimeImmutable($v);
+            return $dt->format('Y-m-d H:i:s');
+        } catch (Throwable $e) {
+            return date('Y-m-d H:i:s');
+        }
     }
 
     private function consultarEstadoQ10($identificacion) {

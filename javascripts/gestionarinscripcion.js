@@ -1766,7 +1766,14 @@ function abrirGestionCarnetSige(idInscripcion, documento) {
                     ' (' + response.data.orden_pendiente.id_operacion + ')'
                 ).show();
                 $('#sige-btn-enviar').prop('disabled', true);
+            } else if (response.data.orden_rechazada) {
+                $('#sige-orden-pendiente').text(
+                    'Última orden rechazada por SIGE (' + response.data.orden_rechazada.tipo + '): ' +
+                    (response.data.orden_rechazada.ultimo_error || 'Conflicto / Rechazo')
+                ).show();
+                $('#sige-btn-enviar').prop('disabled', false);
             } else {
+                $('#sige-orden-pendiente').hide();
                 $('#sige-btn-enviar').prop('disabled', false);
             }
             actualizarFormularioSige();
