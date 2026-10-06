@@ -544,14 +544,12 @@ class SigeCarnetCompat {
                     $stmtDoc->execute(array(':doc' => $documentoClean));
                     $filaDoc = $stmtDoc->fetch();
                     if ($filaDoc) {
-                        if ($filaDoc['id_inscripcion'] === null || (int)$filaDoc['id_inscripcion'] === (int)$idInscripcion) {
-                            if ($filaDoc['id_inscripcion'] === null) {
-                                $updLink = $pdo->prepare("UPDATE sige_carnet_proyeccion SET id_inscripcion = :id WHERE id = :pid");
-                                $updLink->execute(array(':id' => $idInscripcion, ':pid' => $filaDoc['id']));
-                                $filaDoc['id_inscripcion'] = $idInscripcion;
-                            }
-                            return $filaDoc;
+                        if ($filaDoc['id_inscripcion'] === null || (int)$filaDoc['id_inscripcion'] !== (int)$idInscripcion) {
+                            $updLink = $pdo->prepare("UPDATE sige_carnet_proyeccion SET id_inscripcion = :id WHERE id = :pid");
+                            $updLink->execute(array(':id' => $idInscripcion, ':pid' => $filaDoc['id']));
+                            $filaDoc['id_inscripcion'] = $idInscripcion;
                         }
+                        return $filaDoc;
                     }
                 }
             }
