@@ -257,7 +257,7 @@ class SigeCarnetCompat {
              VALUES
              (:carnet_id, :id_inscripcion, :documento, :uid,
               :estado, :motivo, :requiere_reactivacion, :fecha_emision, :vigencia_hasta,
-              1, NULL, :version_estado, :version_legacy, NOW())
+              1, '', :version_estado, :version_legacy, NOW())
              ON DUPLICATE KEY UPDATE
                 id_inscripcion = VALUES(id_inscripcion),
                 numero_documento = VALUES(numero_documento),

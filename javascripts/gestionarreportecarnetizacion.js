@@ -310,7 +310,7 @@ function cargarTablaAcuses() {
                     renderizarTablaAcuses(res);
                 },
                 error: function() {
-                    $("#tbody_acuses_recibo").html('<tr><td colspan="7" class="text-center text-danger">Error de comunicación con el servidor al consultar los acuses.</td></tr>');
+                    $("#tbody_acuses_recibo").html('<tr><td colspan="8" class="text-center text-danger">Error de comunicación con el servidor al consultar los acuses.</td></tr>');
                 }
             });
         }
@@ -321,7 +321,7 @@ function renderizarTablaAcuses(res) {
     if (res && res.status === 'success') {
         var html = '';
         if (res.data.length === 0) {
-            html = '<tr><td colspan="7" class="text-center text-muted">No se encontraron registros de correos ni acuses.</td></tr>';
+            html = '<tr><td colspan="8" class="text-center text-muted">No se encontraron registros de correos ni acuses.</td></tr>';
         } else {
             $.each(res.data, function(idx, reg) {
                 var badgeClass = 'label-warning';
@@ -338,6 +338,8 @@ function renderizarTablaAcuses(res) {
                     estadoTexto = '🟡 PENDIENTE';
                 }
 
+                var emailEscaped = (reg.destinatario_email || '').replace(/'/g, "\\'");
+
                 html += '<tr>' +
                     '<td>' + reg.id + '</td>' +
                     '<td><b>' + (reg.destinatario_email || '') + '</b><br><small class="text-muted">Estudiante: ' + (reg.estudiante_id || 'N/A') + '</small></td>' +
@@ -346,11 +348,74 @@ function renderizarTablaAcuses(res) {
                     '<td><span class="label ' + badgeClass + '">' + estadoTexto + '</span></td>' +
                     '<td>' + (reg.fecha_confirmacion || '<span class="text-muted">Sin confirmar</span>') + '</td>' +
                     '<td><small>IP: ' + (reg.ip_confirmacion || 'N/A') + '</small></td>' +
+                    '<td class="text-center">' +
+                        '<button type="button" class="btn btn-xs btn-warning" title="Corregir correo y reenviar acuse" onclick="abrirModalEditarCorreo(' + reg.id + ', \'' + emailEscaped + '\')">' +
+                            '<i class="fa fa-pencil"></i> Editar y Reenviar' +
+                        '</button>' +
+                    '</td>' +
                 '</tr>';
             });
         }
         $("#tbody_acuses_recibo").html(html);
     } else {
-        $("#tbody_acuses_recibo").html('<tr><td colspan="7" class="text-center text-danger">Error: ' + (res ? res.message : 'Respuesta no válida') + '</td></tr>');
+        $("#tbody_acuses_recibo").html('<tr><td colspan="8" class="text-center text-danger">Error: ' + (res ? res.message : 'Respuesta no válida') + '</td></tr>');
     }
 }
+
+function abrirModalEditarCorreo(id, emailActual) {
+    $("#edit_acuse_id").val(id);
+    $("#edit_acuse_email_actual").val(emailActual);
+    $("#edit_acuse_nuevo_email").val(emailActual);
+    $("#modalEditarCorreoAcuse").modal("show");
+}
+
+function guardarYReenviarAcuse(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    
+    var idAcuse = $("#edit_acuse_id").val();
+    var nuevoEmail = $("#edit_acuse_nuevo_email").val();
+    
+    if (!idAcuse || !nuevoEmail) {
+        alert("Por favor ingrese un correo válido.");
+        return false;
+    }
+    
+    var btn = $("#btn_submit_reenviar_acuse");
+    var htmlOriginal = btn.html();
+    btn.prop("disabled", true).html('<i class="fa fa-spinner fa-spin"></i> Reenviando...');
+    
+    $.ajax({
+        url: "developer/Controller/reportecarnetizacionControler.php?case=ReenviarAcuseCorregido",
+        type: "POST",
+        dataType: "JSON",
+        data: {
+            id_acuse: idAcuse,
+            nuevo_email: nuevoEmail
+        },
+        success: function(res) {
+            btn.prop("disabled", false).html(htmlOriginal);
+            if (res && res.status === "success") {
+                $("#modalEditarCorreoAcuse").modal("hide");
+                if (typeof swal === "function") {
+                    swal("¡Éxito!", res.message, "success");
+                } else {
+                    alert("¡Éxito! " + res.message);
+                }
+                cargarTablaAcuses();
+            } else {
+                var msgErr = (res && res.message) ? res.message : "Error al procesar la solicitud.";
+                if (typeof swal === "function") {
+                    swal("Error", msgErr, "error");
+                } else {
+                    alert("Error: " + msgErr);
+                }
+            }
+        },
+        error: function() {
+            btn.prop("disabled", false).html(htmlOriginal);
+            alert("Error de comunicación con el servidor al reintentar el envío.");
+        }
+    });
+    
+    return false;
+}

@@ -246,7 +246,9 @@ class SigeWebhook extends db {
         $respuesta = curl_exec($ch);
         $http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80500) {
+            curl_close($ch);
+        }
 
         if ($respuesta === false) {
             return array('disponible' => false, 'estado' => null,
@@ -317,7 +319,9 @@ class SigeWebhook extends db {
         $respuesta = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error_curl = curl_error($ch);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80500) {
+            curl_close($ch);
+        }
 
         // Si hay error de cURL (timeout, conexión rechazada, etc.)
         if ($respuesta === false) {

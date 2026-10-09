@@ -3,6 +3,7 @@ session_start();
 date_default_timezone_set("America/Bogota");
 header('content-type: application/json; charset=utf-8');
 require('../Models/reportecarnetizacion.php');
+require_once('../Services/MailAcuseService.php');
 $instancia = new ReporteCarnetizacion();
 
 if (isset($_GET['case'])) {
@@ -446,6 +447,24 @@ switch ($case) {
         } catch (Exception $e) {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
+        exit;
+    break;
+
+    case 'ReenviarAcuseCorregido':
+        if (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $idAcuse = intval($_POST['id_acuse'] ?? $_GET['id_acuse'] ?? 0);
+        $nuevoCorreo = trim($_POST['nuevo_email'] ?? $_GET['nuevo_email'] ?? '');
+
+        if ($idAcuse <= 0 || empty($nuevoCorreo)) {
+            echo json_encode(['status' => 'error', 'message' => 'Parámetros incompletos. ID y Nuevo Correo son requeridos.']);
+            exit;
+        }
+
+        $mailAcuseService = new MailAcuseService();
+        $resultado = $mailAcuseService->reenviarCorreoAcuse($idAcuse, $nuevoCorreo);
+        echo json_encode($resultado);
         exit;
     break;
 

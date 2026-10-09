@@ -268,15 +268,48 @@
                                         <th>Estado Acuse</th>
                                         <th>Fecha Confirmación</th>
                                         <th>Detalles / IP</th>
+                                        <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody_acuses_recibo">
                                     <tr>
-                                        <td colspan="7" class="text-center">Cargando trazabilidad de correos...</td>
+                                        <td colspan="8" class="text-center">Cargando trazabilidad de correos...</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Correo y Reenviar Acuse -->
+    <div class="modal fade" id="modalEditarCorreoAcuse" tabindex="-1" role="dialog" aria-labelledby="modalEditarCorreoLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary" style="color: #fff;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar" style="color: #fff;"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="modalEditarCorreoLabel"><i class="fa fa-pencil-square-o"></i> Corregir Correo y Reenviar Acuse</h4>
+                </div>
+                <form id="formEditarCorreoAcuse" onsubmit="guardarYReenviarAcuse(event);">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_acuse_id" name="id_acuse">
+                        <div class="form-group">
+                            <label for="edit_acuse_email_actual">Correo Actual (Registrado):</label>
+                            <input type="text" class="form-control" id="edit_acuse_email_actual" readonly style="background-color: #f8f9fa;">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_acuse_nuevo_email">Nuevo Correo Electrónico <span class="text-danger">*</span>:</label>
+                            <input type="email" class="form-control" id="edit_acuse_nuevo_email" required placeholder="ejemplo@correo.com">
+                            <small class="form-text text-muted">Al reenviar, se reiniciará el temporizador de 5 días para el Silencio Administrativo Positivo.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning" id="btn_submit_reenviar_acuse">
+                            <i class="fa fa-paper-plane"></i> Guardar y Reenviar
+                        </button>
                     </div>
                 </form>
             </div>
