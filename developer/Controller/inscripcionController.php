@@ -792,7 +792,10 @@ switch ($case) {
                         "allow_self_signed" => true
                     )));
                     
-                    if (!$mail->Send()) {
+                    $envioAcuseOk = (bool)$mail->Send();
+                    // Guardar el resultado real: un acuse FALLIDO no pasa a silencio positivo y el cron lo reintenta
+                    $mailAcuseService->marcarResultadoEnvio($datosAcuse['id'] ?? null, $envioAcuseOk);
+                    if (!$envioAcuseOk) {
                         error_log("Error enviando correo de acuse a $txtcorreo: " . $mail->ErrorInfo);
                     }
                 }
@@ -1087,7 +1090,10 @@ switch ($case) {
                         "allow_self_signed" => true
                     )));
                     
-                    if (!$mail->Send()) {
+                    $envioAcuseOk = (bool)$mail->Send();
+                    // Guardar el resultado real: un acuse FALLIDO no pasa a silencio positivo y el cron lo reintenta
+                    $mailAcuseService->marcarResultadoEnvio($datosAcuse['id'] ?? null, $envioAcuseOk);
+                    if (!$envioAcuseOk) {
                         error_log("Error enviando correo de acuse a $txtcorreo: " . $mail->ErrorInfo);
                     }
                 }

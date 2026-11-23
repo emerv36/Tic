@@ -1,72 +1,101 @@
 <?php
 // developer/bin/cron_recordatorios_acuses.php
-// Tarea automatizada para:
-// 1. Reenviar recordatorio a acuses PENDIENTES (cada 48 horas, máx 2 reintentos).
-// 2. Aplicar SILENCIO ADMINISTRATIVO POSITIVO tras 5 días hábiles.
+// Tarea programada (una vez al día) para acuses de recibo de carnetización:
+// 1. Envía recordatorios por correo a los acuses PENDIENTES (máx. 2, separados ~48 h),
+//    incluidos los envíos iniciales FALLIDOS (el recordatorio actúa como reintento).
+// 2. Aplica SILENCIO ADMINISTRATIVO POSITIVO (CONFIRMADO_TACITO) cuando, después del último
+//    recordatorio enviado con éxito, transcurren 5 días hábiles (Colombia) sin confirmación.
+//
+// Uso:
+//   php cron_recordatorios_acuses.php            -> ejecuta (envía correos y actualiza la BD)
+//   php cron_recordatorios_acuses.php --simular  -> solo lista lo que haría, sin enviar ni actualizar
+//   php cron_recordatorios_acuses.php --limite=50
+//
+// Cron sugerido (cPanel), con salida a log:
+//   0 20 * * * TIC_SIGE_SECRETS_FILE=/home/uybntujx/secrets.json /usr/local/bin/php /home/uybntujx/tic.scv.edu.co/developer/bin/cron_recordatorios_acuses.php >> /home/uybntujx/cron_acuses.log 2>&1
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit(1);
+}
 
 date_default_timezone_set('America/Bogota');
+
+$opciones = getopt('', ['simular', 'limite::']);
+$simular = isset($opciones['simular']);
+$limite = isset($opciones['limite']) ? max(1, (int)$opciones['limite']) : 200;
+
+$lockPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'tic_recordatorios_acuses.lock';
+$lock = fopen($lockPath, 'c');
+if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+    fwrite(STDERR, "Ya existe una ejecución de recordatorios de acuses en curso.\n");
+    exit(2);
+}
+
 require_once(__DIR__ . '/../Config/PDOconn.php');
 require_once(__DIR__ . '/../Services/MailAcuseService.php');
 
-$dbPass = (defined('pass') && pass !== '') ? pass : (getenv('TIC_DB_PASS') ?: 'B.quilla54');
+function registrarLinea($texto) {
+    echo '[' . date('Y-m-d H:i:s') . '] ' . $texto . PHP_EOL;
+}
+
+$codigoSalida = 0;
+$mail = null;
 
 try {
-    $pdo = new PDO(connstring, user, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
+    $servicio = new MailAcuseService();
+    registrarLinea('=== Recordatorios y silencio positivo de acuses' . ($simular ? ' (SIMULACIÓN)' : '') . ' ===');
 
-    echo "=== INICIANDO TAREA AUTOMATIZADA DE RECORDATORIOS Y SILENCIO POSITIVO ===\n";
-
-    // 1. APLICAR SILENCIO ADMINISTRATIVO POSITIVO (Mas de 5 dias sin confirmación)
-    // Cambia estado a CONFIRMADO_TACITO
-    $diasSilencio = 5;
-    $fechaLimiteSilencio = date('Y-m-d H:i:s', strtotime("-$diasSilencio days"));
-
-    $stmtTacito = $pdo->prepare("UPDATE log_correos_acuses 
-        SET estado_acuse = 'CONFIRMADO_TACITO'
-        WHERE estado_acuse = 'PENDIENTE' 
-          AND fecha_envio <= :fecha_limite");
-    $stmtTacito->execute([':fecha_limite' => $fechaLimiteSilencio]);
-    $afectadosTacito = $stmtTacito->rowCount();
-
-    echo "--> Silencio Administrativo Positivo aplicado a: $afectadosTacito registros.\n";
-
-    // 2. BUSCAR REGISTROS PENDIENTES PARA RECORDATORIO (48 horas tras envío o último recordatorio)
-    $fechaLimiteRecordatorio = date('Y-m-d H:i:s', strtotime("-48 hours"));
-
-    $stmtPendientes = $pdo->prepare("SELECT * FROM log_correos_acuses 
-        WHERE estado_acuse = 'PENDIENTE' 
-          AND intentos_recordatorio < 2
-          AND (
-            (intentos_recordatorio = 0 AND fecha_envio <= :fecha1) OR
-            (intentos_recordatorio > 0 AND fecha_ultimo_recordatorio <= :fecha2)
-          )");
-    $stmtPendientes->execute([
-        ':fecha1' => $fechaLimiteRecordatorio,
-        ':fecha2' => $fechaLimiteRecordatorio
-    ]);
-
-    $pendientes = $stmtPendientes->fetchAll();
-    echo "--> Registros elegibles para recordatorio: " . count($pendientes) . "\n";
-
-    $mailAcuseService = new MailAcuseService();
-
-    foreach ($pendientes as $reg) {
-        // En producción se integra con PHPMailer / Mailer de la app
-        // Aquí actualizamos el contador de intentos y fecha de último recordatorio
-        $intentos = $reg['intentos_recordatorio'] + 1;
-        $updRecordatorio = $pdo->prepare("UPDATE log_correos_acuses 
-            SET intentos_recordatorio = :intentos,
-                fecha_ultimo_recordatorio = NOW()
-            WHERE id = :id");
-        $updRecordatorio->execute([':intentos' => $intentos, ':id' => $reg['id']]);
-
-        echo "    [Recordatorio #$intentos enviado a: {$reg['destinatario_email']} (ID: {$reg['id']})]\n";
+    // 1. Silencio positivo primero: así un acuse que ya cumplió su plazo no recibe más correos.
+    if ($simular) {
+        registrarLinea('Silencio positivo: omitido en simulación.');
+    } else {
+        $tacitos = $servicio->aplicarSilencioPositivo();
+        registrarLinea('Silencio positivo aplicado a ' . count($tacitos) . ' acuse(s)' . (count($tacitos) ? ': ' . implode(', ', $tacitos) : '') . '.');
     }
 
-    echo "=== TAREA AUTOMATIZADA FINALIZADA CON ÉXITO ===\n";
+    // 2. Recordatorios
+    $pendientes = $servicio->obtenerPendientesParaRecordatorio($limite);
+    registrarLinea('Acuses elegibles para recordatorio: ' . count($pendientes) . '.');
 
-} catch (Exception $e) {
-    echo "ERROR CRON RECORDATORIOS: " . $e->getMessage() . "\n";
+    $enviados = 0;
+    $fallidos = 0;
+
+    if (!$simular && count($pendientes) > 0) {
+        $mail = $servicio->crearMailer(); // una conexión SMTP reutilizada (SMTPKeepAlive)
+    }
+
+    foreach ($pendientes as $registro) {
+        $numero = (int)$registro['intentos_recordatorio'] + 1;
+        if ($simular) {
+            registrarLinea("  [simulado] Recordatorio #$numero -> {$registro['destinatario_email']} (acuse {$registro['id']}, envío inicial {$registro['fecha_envio']}, estado_envio {$registro['estado_envio']})");
+            continue;
+        }
+
+        $resultado = $servicio->enviarRecordatorio($registro, $mail);
+        if ($resultado['ok']) {
+            $enviados++;
+            registrarLinea("  OK    Recordatorio #$numero -> {$registro['destinatario_email']} (acuse {$registro['id']})");
+        } else {
+            $fallidos++;
+            registrarLinea("  ERROR Recordatorio #$numero -> {$registro['destinatario_email']} (acuse {$registro['id']}): {$resultado['error']}");
+        }
+        usleep(300000); // pausa corta para no saturar el SMTP
+    }
+
+    registrarLinea("Recordatorios enviados: $enviados. Fallidos: $fallidos.");
+    registrarLinea('=== Fin ===');
+    $codigoSalida = $fallidos > 0 ? 1 : 0;
+
+} catch (Throwable $e) {
+    registrarLinea('ERROR CRON RECORDATORIOS: ' . $e->getMessage());
+    error_log('cron_recordatorios_acuses: ' . $e->getMessage());
+    $codigoSalida = 1;
 }
+
+if (is_object($mail)) {
+    try { $mail->smtpClose(); } catch (Throwable $e) { /* sin acción */ }
+}
+flock($lock, LOCK_UN);
+fclose($lock);
+exit($codigoSalida);

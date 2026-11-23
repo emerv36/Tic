@@ -1,6 +1,7 @@
 <?php
-  require("../phpmailer/class.phpmailer.php"); 
-  require("../phpmailer/class.smtp.php");
+  // Rutas absolutas y require_once: permite cargarlo desde CLI (developer/bin) y varias veces por petición
+  require_once(__DIR__ . "/../phpmailer/class.phpmailer.php");
+  require_once(__DIR__ . "/../phpmailer/class.smtp.php");
   $mail = new PHPMailer();
   $mail->IsSMTP();
   $mail->SMTPAuth = true;
